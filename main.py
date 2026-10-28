@@ -9,6 +9,7 @@ import time
 
 from machine import I2C, Pin
 
+import clock
 import config
 import web
 import wifi
@@ -29,6 +30,7 @@ print("network:", net)
 
 async def main():
     asyncio.create_task(wifi.keep_connected(net, lambda: beacon.cfg))
+    asyncio.create_task(clock.keep_synced(net, lambda: beacon.cfg))
     await web.serve(beacon, net)
 
 

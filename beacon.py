@@ -124,10 +124,15 @@ class Beacon:
             clk.set_frequency(ch, band["freq"] // spec["mult"],
                               pll=spec["pll"], enable=False)
             self._wait_lock(spec["pll"])
-            if band["mode"] == "morse":
+            mode = band["mode"]
+            if mode == "morse":
                 self._send_morse(ch, config.message(cfg), cfg["wpm"])
-            else:
+            elif mode == "carrier":
                 self._send_carrier(ch, band["carrier_s"])
+            elif mode == "duty":
+                self._send_duty(ch, band)
+            else:
+                self._send_fsk(spec, band, config.message(cfg), cfg["wpm"])
         finally:
             clk.disable_all()
             self._set_state(band=None, last_tx_ms=time.ticks_ms())
@@ -173,6 +178,40 @@ class Beacon:
             name, self._manual = self._manual, None
         if name is not None and self.tx_enabled:
             self._try_transmit(name)
+
+    def _send_duty(self, ch, band):
+        """Key the carrier on and off at a fixed period and duty cycle."""
+        period = band["period_ms"] * 1000
+        on_us = period * band["duty_pct"] // 100
+        t = time.ticks_us()
+        end = time.ticks_add(t, band["carrier_s"] * 1000000)
+        while self._active() and time.ticks_diff(end, t) > 0:
+            self.clk.enable(ch)
+            t = time.ticks_add(t, on_us)
+            _wait_until(t)
+            self.clk.enable(ch, False)
+            t = time.ticks_add(t, period - on_us)
+            _wait_until(t)
+
+    def _send_fsk(self, spec, band, text, wpm):
+        """Send Morse as frequency shift keying: the carrier stays on, at the
+        band frequency for key-down and shift_hz higher for key-up."""
+        ch, pll, mult = spec["ch"], spec["pll"], spec["mult"]
+        mark = band["freq"] // mult
+        space = (band["freq"] + band["shift_hz"]) // mult
+        dit = morse.dit_us(wpm)
+        deadline = time.ticks_us()
+        current = mark  # transmit() has already tuned to the mark frequency
+        self.clk.enable(ch)
+        for element in morse.timing(text):
+            if not self._active():
+                break
+            tone = mark if element > 0 else space
+            if tone != current:
+                self.clk.set_frequency(ch, tone, pll=pll, reset=False, enable=False)
+                current = tone
+            deadline = time.ticks_add(deadline, abs(element) * dit)
+            _wait_until(deadline)
 
     def _pause(self, seconds):
         for _ in range(int(seconds * 10)):

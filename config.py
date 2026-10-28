@@ -14,14 +14,20 @@ BANDS = {
 }
 BAND_ORDER = ("6m", "2m", "70cm")
 
-MODES = ("morse", "carrier")
+MODES = ("morse", "carrier", "duty", "fsk")
 
 # Settings that may be changed through the web API.
 TOP_KEYS = ("callsign", "locator", "message", "wpm", "gap_s", "interval_s",
             "correction_ppb", "tx_enabled", "wifi_ssid", "wifi_password",
-            "web_password")
-BAND_KEYS = ("enabled", "mode", "freq", "carrier_s")
+            "web_password", "ntp_host")
+BAND_KEYS = ("enabled", "mode", "freq", "carrier_s", "period_ms", "duty_pct",
+             "shift_hz")
 SECRET_KEYS = ("wifi_password", "web_password")
+
+
+def _band(freq):
+    return {"enabled": False, "mode": "morse", "freq": freq, "carrier_s": 5,
+            "period_ms": 1000, "duty_pct": 50, "shift_hz": 200}
 
 
 def defaults():
@@ -40,13 +46,17 @@ def defaults():
         "interval_s": 30,
         "wifi_ssid": "",
         "wifi_password": "",
+        "ntp_host": "pool.ntp.org",
         # Required for the web interface and used as the setup access point's
         # WPA2 key, so at least 8 characters.
         "web_password": "",
+        # Per band: carrier_s is the length of carrier and duty-cycle
+        # transmissions; duty mode uses period_ms/duty_pct; fsk mode sends the
+        # Morse message with key-up shifted shift_hz above the band frequency.
         "bands": {
-            "6m": {"enabled": False, "mode": "morse", "freq": 50050000, "carrier_s": 5},
-            "2m": {"enabled": False, "mode": "morse", "freq": 144450000, "carrier_s": 5},
-            "70cm": {"enabled": False, "mode": "morse", "freq": 432450000, "carrier_s": 5},
+            "6m": _band(50050000),
+            "2m": _band(144450000),
+            "70cm": _band(432450000),
         },
     }
 
@@ -87,6 +97,9 @@ def validate(cfg):
     ssid, wpass, apass = cfg["wifi_ssid"], cfg["wifi_password"], cfg["web_password"]
     if not all(isinstance(v, str) for v in (ssid, wpass, apass)):
         raise ValueError("wifi and web settings must be text")
+    ntp = cfg["ntp_host"]
+    if not isinstance(ntp, str) or not 1 <= len(ntp) <= 64 or " " in ntp:
+        raise ValueError("ntp_host must be a host name or address")
     if len(ssid) > 32:
         raise ValueError("wifi_ssid is too long")
     if wpass and not 8 <= len(wpass) <= 63:
@@ -102,8 +115,12 @@ def validate(cfg):
         if not _is_int(band["freq"]) or not spec["lo"] <= band["freq"] <= spec["hi"]:
             raise ValueError("%s: frequency must be %d-%d Hz"
                              % (name, spec["lo"], spec["hi"]))
-        if not _is_int(band["carrier_s"]) or not 1 <= band["carrier_s"] <= 60:
-            raise ValueError("%s: carrier_s must be 1-60" % name)
+        for key, lo, hi in (("carrier_s", 1, 60), ("period_ms", 50, 60000),
+                            ("duty_pct", 1, 99), ("shift_hz", 10, 5000)):
+            if not _is_int(band[key]) or not lo <= band[key] <= hi:
+                raise ValueError("%s: %s must be %d-%d" % (name, key, lo, hi))
+        if band["mode"] == "fsk" and band["freq"] + band["shift_hz"] > spec["hi"]:
+            raise ValueError("%s: frequency plus shift is above the band" % name)
 
 
 def copy(cfg):

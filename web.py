@@ -12,6 +12,7 @@ import asyncio
 import binascii
 import json
 
+import clock
 import config
 
 _MAX_BODY = 2048
@@ -65,6 +66,7 @@ def route(beacon, net, method, path, headers, body):
     if method == "GET" and path == "/api/status":
         status = beacon.status()
         status["net"] = net
+        status["clock"] = clock.status()
         return _json(200, status)
     if method == "GET" and path == "/api/config":
         return _json(200, config.public(beacon.current_config()))

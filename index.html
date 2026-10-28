@@ -29,6 +29,8 @@ input[type=text],input[type=password],input[type=number],select{width:100%;paddi
 .bands{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .band{border:1px solid #ccd;border-radius:6px;padding:8px;display:grid;gap:6px;background:#fafbff}
 .band.air{border-color:#e90;background:#fff4de}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.opt[hidden]{display:none}
 .band h3{margin:0;font-size:16px;display:flex;justify-content:space-between;align-items:center}
 .badge{font-size:11px;background:#e90;color:#fff;border-radius:8px;padding:1px 8px}
 .chk{display:flex;align-items:center;gap:6px;font-size:13px;color:#222}
@@ -68,6 +70,7 @@ small{color:#667;display:block;margin-top:6px;font-size:12px}
 <h2>Network</h2>
 <label>Wi-Fi network <input type="text" id="wifi_ssid"></label>
 <label>Wi-Fi password <input type="password" id="wifi_password" autocomplete="new-password" placeholder="(unchanged)"></label>
+<label>Time server (NTP) <input type="text" id="ntp_host"></label>
 <label>Web / setup password <input type="password" id="web_password" autocomplete="new-password" placeholder="(unchanged, 8+ chars)"></label>
 <div class="save"><button type="button" id="save_network">Save network</button><span id="network_msg" class="msg"></span></div>
 <small>Network changes apply after a reboot. A new web password takes effect straight away, and the browser will ask you to sign in again.</small>
@@ -87,11 +90,24 @@ for (const name in BANDS) {
   d.innerHTML = `<h3>${name} <span class="badge" id="${name}_air" hidden>ON AIR</span></h3>
     <label class="chk"><input type="checkbox" id="${name}_enabled"> In the schedule</label>
     <label>Frequency, MHz (${lo}–${hi}) <input type="number" step="0.000001" id="${name}_freq"></label>
-    <label>Mode <select id="${name}_mode"><option>morse</option><option>carrier</option></select></label>
-    <label>Carrier length, s <input type="number" id="${name}_carrier_s" min="1" max="60"></label>
+    <label>Mode <select id="${name}_mode"><option value="morse">Morse ID (on/off)</option><option value="fsk">Morse ID (FSK)</option><option value="carrier">Carrier</option><option value="duty">Duty cycle</option></select></label>
+    <label class="opt" data-for="carrier duty">Length, s <input type="number" id="${name}_carrier_s" min="1" max="60"></label>
+    <div class="two opt" data-for="duty">
+      <label>Period, ms <input type="number" id="${name}_period_ms" min="50" max="60000"></label>
+      <label>On, % <input type="number" id="${name}_duty_pct" min="1" max="99"></label>
+    </div>
+    <label class="opt" data-for="fsk">Key-up shift, Hz above <input type="number" id="${name}_shift_hz" min="10" max="5000"></label>
     <button type="button" class="tx" id="${name}_tx">Transmit now</button>`;
   $("bands").appendChild(d);
   $(name + "_tx").addEventListener("click", () => transmitNow(name));
+  $(name + "_mode").addEventListener("change", () => showOptions(name));
+}
+
+function showOptions(name) {
+  const mode = $(name + "_mode").value;
+  document.querySelectorAll("#band_" + name + " .opt").forEach(e => {
+    e.hidden = !e.dataset.for.split(" ").includes(mode);
+  });
 }
 
 async function api(path, body) {
@@ -109,14 +125,15 @@ function num(id, label) {
 
 async function loadConfig() {
   const c = await api("/api/config");
-  for (const k of ["callsign","locator","wpm","message","gap_s","interval_s","wifi_ssid"]) $(k).value = c[k];
+  for (const k of ["callsign","locator","wpm","message","gap_s","interval_s","wifi_ssid","ntp_host"]) $(k).value = c[k];
   $("tx_enabled").checked = c.tx_enabled;
   for (const n in BANDS) {
     const b = c.bands[n];
     $(n + "_enabled").checked = b.enabled;
     $(n + "_freq").value = (b.freq / 1e6).toFixed(6);
     $(n + "_mode").value = b.mode;
-    $(n + "_carrier_s").value = b.carrier_s;
+    for (const k of ["carrier_s", "period_ms", "duty_pct", "shift_hz"]) $(n + "_" + k).value = b[k];
+    showOptions(n);
   }
   dirty = false;
   render();
@@ -131,6 +148,7 @@ function render() {
   $("status").innerHTML =
     chip(s.tx_enabled ? "TRANSMIT ENABLED" : "transmit off", s.tx_enabled ? "on" : "") +
     chip(s.band ? "ON AIR: " + s.band : (s.queued ? "queued: " + s.queued : "idle"), s.band ? "air" : "") +
+    chip(s.clock.synced ? "UTC " + s.clock.utc.slice(11) : "time not synced", s.clock.synced ? "" : "bad") +
     chip("last tx: " + (s.last_tx_age_s == null ? "–" : s.last_tx_age_s + " s ago")) +
     chip(`${s.net.mode} ${s.net.ssid} ${s.net.ip}`) +
     chip("up " + Math.floor(s.uptime_s / 60) + " min") +
@@ -177,7 +195,8 @@ $("save_station").addEventListener("click", async () => {
       bands: {}};
     for (const n in BANDS) u.bands[n] = {enabled: $(n + "_enabled").checked,
       freq: Math.round(num(n + "_freq", n + " frequency") * 1e6), mode: $(n + "_mode").value,
-      carrier_s: num(n + "_carrier_s", n + " carrier length")};
+      carrier_s: num(n + "_carrier_s", n + " length"), period_ms: num(n + "_period_ms", n + " period"),
+      duty_pct: num(n + "_duty_pct", n + " duty cycle"), shift_hz: num(n + "_shift_hz", n + " shift")};
     await api("/api/config", u);
     dirty = false;
     say("station_msg", "Saved", "ok");
@@ -188,7 +207,7 @@ $("save_station").addEventListener("click", async () => {
 
 $("save_network").addEventListener("click", async () => {
   try {
-    const u = {wifi_ssid: $("wifi_ssid").value.trim()};
+    const u = {wifi_ssid: $("wifi_ssid").value.trim(), ntp_host: $("ntp_host").value.trim()};
     for (const k of ["wifi_password", "web_password"]) if ($(k).value) u[k] = $(k).value;
     await api("/api/config", u);
     $("wifi_password").value = $("web_password").value = "";
