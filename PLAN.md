@@ -121,7 +121,10 @@ Cores communicate through a small shared state object (the current config snapsh
 | `beacon.py` | Per-band beacon scheduler and modulation (core 1) |
 | `morse.py` | Text → Morse timing |
 | `config.py` | Defaults, validation (band limits), persistence |
-| `web.py` | HTTP server, API, HTML UI |
+| `web.py` | HTTP server and JSON API (Basic auth) |
+| `index.html` | Web UI: status, per-band settings and Transmit now buttons, network settings |
+| `wifi.py` | Join the configured network, else a setup access point |
+| `bringup.py` | Hardware bring-up test of the three Si5351 outputs |
 | `wspr.py` | WSPR message encoding (later) |
 
 ## Modulation modes
@@ -187,9 +190,9 @@ The 434.6/435.3 MHz spurs fall inside the SAW passband (133 kHz below and 100 kH
 1. ~~Verify dev environment (blink + hello world)~~ ✔
 2. ~~Si5351 driver: probe over I2C, set a single frequency, check with a spectrum analyser~~ ✔
 3. Three outputs: 6m, 2m, and 70cm via the 3rd harmonic; confirm PLL allocation and filtering. ✔ outputs and 3rd harmonic confirmed on a TinySA Ultra; filtering still to be built.
-4. Morse ID and on/off modulation on core 1.
-5. Wi-Fi + minimal web server on core 0 with config persistence.
-6. Full web UI with per-band configuration and authentication.
+4. ~~Morse ID and on/off modulation on core 1~~ ✔ (one band at a time; key-click shaping to revisit with filters and amplifiers fitted)
+5. ~~Wi-Fi + minimal web server on core 0 with config persistence~~ ✔
+6. ~~Full web UI with per-band configuration and authentication~~ ✔ (Basic auth over plain HTTP: trusted LAN only)
 7. Duty-cycle and FSK modes.
 8. WSPR (NTP time sync, encoding, symbol timing).
 9. GPS: UART/NMEA time, 1PPS capture, ppm calibration, safety limits, documentation.

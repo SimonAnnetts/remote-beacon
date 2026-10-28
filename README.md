@@ -26,4 +26,21 @@ See [PLAN.md](PLAN.md) for the full design, risks and milestones.
 
 ## Status
 
-Planning. The development environment (VS Code + MicroPico) has been verified.
+Working on the bench, without filters or amplifiers yet:
+
+- Si5351 driver with all three outputs, PLL allocation and crystal ppm correction.
+- Morse ID beacon that transmits one band at a time, scheduled from the Pico's second core.
+- Web interface (Wi-Fi, password protected) for the station and band settings, a
+  Transmit now button per band and an emergency stop.
+
+Still to come: duty-cycle and FSK modes, WSPR, GPS time and calibration, and the filter and
+amplifier hardware.
+
+## Setup
+
+1. Flash MicroPython (v1.29 was used) onto the Pico W.
+2. Copy `config.example.json` to `config.json` and fill in your Wi-Fi details and a web
+   password of at least 8 characters. `config.json` is not committed.
+3. Upload the project to the Pico (the MicroPico extension's **Upload project**). `main.py`
+   starts the beacon and web server at power-up, with transmitting disabled until you tick
+   **Transmit enabled** in the web interface.
