@@ -2,19 +2,24 @@
 import json
 import os
 
+import wspr
+
 CONFIG_FILE = "config.json"
 
 # Output channel and PLL are fixed by the hardware (see PLAN.md). mult is the
 # harmonic used: 70cm is the third harmonic of a carrier on CLK2. lo/hi are the
 # UK allocations in Hz of the transmitted frequency.
 BANDS = {
-    "6m": {"ch": 0, "pll": 0, "mult": 1, "lo": 50000000, "hi": 52000000},
-    "2m": {"ch": 1, "pll": 0, "mult": 1, "lo": 144000000, "hi": 146000000},
-    "70cm": {"ch": 2, "pll": 1, "mult": 3, "lo": 430000000, "hi": 440000000},
+    "6m": {"ch": 0, "pll": 0, "mult": 1, "lo": 50000000, "hi": 52000000, "wspr": True},
+    "2m": {"ch": 1, "pll": 0, "mult": 1, "lo": 144000000, "hi": 146000000, "wspr": False},
+    "70cm": {"ch": 2, "pll": 1, "mult": 3, "lo": 430000000, "hi": 440000000, "wspr": False},
 }
 BAND_ORDER = ("6m", "2m", "70cm")
 
-MODES = ("morse", "carrier", "duty", "fsk", "am", "mcw", "fm", "fmcw")
+MODES = ("morse", "carrier", "duty", "fsk", "am", "mcw", "fm", "fmcw", "wspr")
+
+# WSPR tones sit this far above the dial frequency (the middle of the audio band).
+WSPR_OFFSET_HZ = 1500
 
 # Default Si5351 output drive current in mA; AM modes switch between two.
 DRIVE_MA = 2
@@ -31,7 +36,7 @@ TOP_KEYS = ("callsign", "locator", "message", "wpm", "gap_s", "interval_s",
             "web_password", "ntp_host")
 BAND_KEYS = ("enabled", "mode", "freq", "carrier_s", "period_ms", "duty_pct",
              "shift_hz", "am_low_ma", "am_high_ma", "am_hz", "am_duty_pct",
-             "fm_dev_hz", "fm_hz")
+             "fm_dev_hz", "fm_hz", "wspr_dbm", "wspr_every")
 SECRET_KEYS = ("wifi_password", "web_password")
 
 
@@ -39,7 +44,7 @@ def _band(freq):
     return {"enabled": False, "mode": "morse", "freq": freq, "carrier_s": 5,
             "period_ms": 1000, "duty_pct": 50, "shift_hz": 200,
             "am_low_ma": 2, "am_high_ma": 8, "am_hz": 400, "am_duty_pct": 50,
-            "fm_dev_hz": 3000, "fm_hz": 400}
+            "fm_dev_hz": 3000, "fm_hz": 400, "wspr_dbm": 10, "wspr_every": 5}
 
 
 def defaults():
@@ -72,6 +77,9 @@ def defaults():
         # frequency, as a square wave at fm_hz, for carrier_s seconds; fmcw
         # sends the Morse message with that FM tone on key-down and the plain
         # carrier left on during key-up.
+        # wspr mode (6m only) sends a WSPR message at the start of every
+        # wspr_every-th two-minute slot; freq is the dial (USB) frequency and
+        # the tones are WSPR_OFFSET_HZ above it. wspr_dbm is the power in the message.
         "bands": {
             "6m": _band(50050000),
             "2m": _band(144450000),
@@ -158,6 +166,21 @@ def validate(cfg):
                 spec["lo"] <= band["freq"] - band["fm_dev_hz"]
                 and band["freq"] + band["fm_dev_hz"] <= spec["hi"]):
             raise ValueError("%s: frequency plus or minus the deviation leaves the band" % name)
+        for key, lo, hi in (("wspr_every", 1, 30),):
+            if not _is_int(band[key]) or not lo <= band[key] <= hi:
+                raise ValueError("%s: %s must be %d-%d" % (name, key, lo, hi))
+        if band["wspr_dbm"] not in wspr.VALID_DBM or isinstance(band["wspr_dbm"], bool):
+            raise ValueError("%s: wspr_dbm must be one of %s" % (name, wspr.VALID_DBM))
+        if band["mode"] == "wspr":
+            if not spec["wspr"]:
+                raise ValueError("%s: WSPR is only supported on 6m for now" % name)
+            try:
+                wspr.normalize_call(call)
+                wspr.normalize_grid(loc)
+            except ValueError as e:
+                raise ValueError("%s: %s" % (name, e))
+            if band["freq"] + WSPR_OFFSET_HZ + 10 > spec["hi"]:
+                raise ValueError("%s: WSPR tones would leave the band" % name)
         if band["mode"] == "fsk" and band["freq"] + band["shift_hz"] > spec["hi"]:
             raise ValueError("%s: frequency plus shift is above the band" % name)
 

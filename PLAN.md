@@ -141,7 +141,8 @@ Implemented (mode names as in the web UI):
    switching the output drive between two of 2/4/6/8 mA at 20–500 Hz. The drive write takes
    ~0.34 ms, so each half cycle must be at least 600 µs. Measured at 50 MHz (10 dB pad):
    -22 / -17 / -14 / -12 dBm for 2 / 4 / 6 / 8 mA, so 2 mA with 8 mA gives ~52% depth and the
-   steps shrink at higher drive. Depth on 2m and 70cm still to be measured.
+   steps shrink at higher drive. Verified on 6m with 2/8 mA at 400 Hz: sidebands ~10 dB
+   below the carrier, as predicted for ~52% depth. Depth on 2m and 70cm still to be measured.
 6. **FM carrier (square-wave tone)** and **Morse ID (FM tone)** – the frequency alternates
    between the band frequency plus and minus a deviation (±100 Hz to 10 kHz) at 20–500 Hz. Each
    step is a single precomputed 8-byte I2C write (~0.39 ms on all three bands). The Morse ID
@@ -149,11 +150,22 @@ Implemented (mode names as in the web UI):
    at 400 Hz: two clean lobes at the right spacing, ~30 dB below them in between. On 70cm the
    deviation is tripled by the harmonic, so the board sets the carrier deviation to a third.
 
-To do:
+7. **WSPR (6m only)** – type 1 message (callsign, 4-character locator, power) as 162 symbols
+   of 4-FSK at 1.4648 baud, sent at second 1 of every N-th even UTC minute (`wspr_every`).
+   The frequency setting is the dial (USB) frequency; the tones sit 1500 Hz above it. The
+   encoder (`wspr.py`) is verified by the real `wsprd` decoder: messages decode correctly,
+   including at about -14 dB SNR with added noise. The tones need millihertz tuning, which
+   only the fractional-MultiSynth output (6m) can do (`Si5351.tuning_mhz`). Requires NTP
+   time; `ntptime` sets the clock to whole seconds, so the start may be up to ~1 s off, which
+   decoders tolerate.
 
-7. **WSPR** (stretch) – 4-FSK, 162 symbols at ~1.4648 baud, time-synchronised to even
-   2-minute boundaries. NTP time is already available (`clock.py`); the encoder and tone
-   timing must be implemented on-device.
+   Not yet done: **WSPR on 2m and 70cm.** Those outputs are tuned by the PLL in ~4 Hz (2m) and
+   ~12 Hz (70cm) steps, coarser than the 1.46 Hz tone spacing. A possible workaround is
+   dithering between the two nearest steps at a few hundred Hz so the average lands on the
+   right tone; to be tested with a real decoder.
+   Crystal temperature drift (tens of ppm, i.e. ~1 kHz at 50 MHz) can push the signal out of
+   the decoder's 200 Hz window, so the ppm correction should be re-checked when warm; GPS will
+   fix this properly.
 
 Each band is configured independently (enabled, frequency, mode, message, schedule).
 
@@ -212,7 +224,7 @@ The 434.6/435.3 MHz spurs fall inside the SAW passband (133 kHz below and 100 kH
 5. ~~Wi-Fi + minimal web server on core 0 with config persistence~~ ✔
 6. ~~Full web UI with per-band configuration and authentication~~ ✔ (Basic auth over plain HTTP: trusted LAN only)
 7. ~~Duty-cycle and FSK modes~~ ✔, plus AM and FM modes and NTP time (`clock.py`) ✔
-8. WSPR (NTP time sync, encoding, symbol timing).
+8. WSPR: ✔ on 6m (NTP time sync, encoding, symbol timing); 2m and 70cm to do.
 9. GPS: UART/NMEA time, 1PPS capture, ppm calibration, safety limits, documentation.
 
 ## Open questions

@@ -271,6 +271,25 @@ class Si5351:
             raise ValueError("%d Hz needs a full set_frequency" % hz)
         return (_REG_MS_BASE[ch], _encode(a, b, c), None, vco, self._output_hz(vco, a, b, c), hz)
 
+    def tuning_mhz(self, ch, mhz):
+        """Like tuning(), but the frequency is in millihertz.
+
+        Needed for WSPR, whose tones are 1.46 Hz apart. Only an output tuned
+        by its fractional MultiSynth (below 112.5 MHz) has that resolution;
+        PLL-tuned outputs step by several Hz.
+        """
+        pll = self._pll_of[ch]
+        if pll is None or self._owner[pll] == ch:
+            raise ValueError("CLK%d cannot be tuned in millihertz" % ch)
+        vco = self._pll_hz[pll]
+        a, b, c = _fraction(vco * 1000, mhz)
+        if not _FRACTIONAL_MIN_DIV <= a <= 1800:
+            raise ValueError("%d mHz is out of range for a %d Hz VCO" % (mhz, vco))
+        if (b == 0) != self._int_mode[ch]:
+            raise ValueError("%d mHz needs a full set_frequency" % mhz)
+        out = self._output_hz(vco, a, b, c)
+        return (_REG_MS_BASE[ch], _encode(a, b, c), None, vco, out, out)
+
     def retune(self, ch, tuning):
         """Apply a tuning() result with one I2C write. No PLL reset."""
         reg, data, pll, vco, out, hz = tuning

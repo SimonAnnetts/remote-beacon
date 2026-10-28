@@ -78,9 +78,10 @@ small{color:#667;display:block;margin-top:6px;font-size:12px}
 </main>
 <script>
 const BANDS = {"6m":[50,52],"2m":[144,146],"70cm":[430,440]};
+const POWERS = [0,3,7,10,13,17,20,23,27,30,33,37,40,43,47,50,53,57,60].map(p => `<option value="${p}">${p} dBm</option>`).join("");
 const DRIVES = [2, 4, 6, 8].map(m => `<option value="${m}">${m} mA</option>`).join("");
 const $ = id => document.getElementById(id);
-const NUMERIC = ["carrier_s", "period_ms", "duty_pct", "shift_hz", "am_low_ma", "am_high_ma", "am_hz", "am_duty_pct", "fm_dev_hz", "fm_hz"];
+const NUMERIC = ["carrier_s", "period_ms", "duty_pct", "shift_hz", "am_low_ma", "am_high_ma", "am_hz", "am_duty_pct", "fm_dev_hz", "fm_hz", "wspr_dbm", "wspr_every"];
 let dirty = false, last = null;
 
 function say(id, text, cls) { const e = $(id); e.textContent = text; e.className = "msg " + (cls || ""); }
@@ -92,7 +93,7 @@ for (const name in BANDS) {
   d.innerHTML = `<h3>${name} <span class="badge" id="${name}_air" hidden>ON AIR</span></h3>
     <label class="chk"><input type="checkbox" id="${name}_enabled"> In the schedule</label>
     <label>Frequency, MHz (${lo}–${hi}) <input type="number" step="0.000001" id="${name}_freq"></label>
-    <label>Mode <select id="${name}_mode"><option value="morse">Morse ID (on/off)</option><option value="fsk">Morse ID (FSK)</option><option value="carrier">Carrier</option><option value="duty">Duty cycle</option><option value="am">AM carrier (two levels)</option><option value="mcw">Morse ID (AM tone)</option><option value="fm">FM carrier (square-wave tone)</option><option value="fmcw">Morse ID (FM tone)</option></select></label>
+    <label>Mode <select id="${name}_mode"><option value="morse">Morse ID (on/off)</option><option value="fsk">Morse ID (FSK)</option><option value="carrier">Carrier</option><option value="duty">Duty cycle</option><option value="am">AM carrier (two levels)</option><option value="mcw">Morse ID (AM tone)</option><option value="fm">FM carrier (square-wave tone)</option><option value="fmcw">Morse ID (FM tone)</option>${name === "6m" ? '<option value="wspr">WSPR</option>' : ""}</select></label>
     <label class="opt" data-for="carrier duty am fm">Length, s <input type="number" id="${name}_carrier_s" min="1" max="60"></label>
     <div class="two opt" data-for="duty">
       <label>Period, ms <input type="number" id="${name}_period_ms" min="50" max="60000"></label>
@@ -110,6 +111,11 @@ for (const name in BANDS) {
       <label>Deviation, ± Hz <input type="number" id="${name}_fm_dev_hz" min="100" max="10000"></label>
       <label>Tone, Hz <input type="number" id="${name}_fm_hz" min="20" max="500"></label>
     </div>
+    <div class="two opt" data-for="wspr">
+      <label>Power in message <select id="${name}_wspr_dbm">${POWERS}</select></label>
+      <label>Every N × 2 min <input type="number" id="${name}_wspr_every" min="1" max="30"></label>
+    </div>
+    <small class="opt" data-for="wspr">Frequency is the dial (USB) frequency; the tones are 1500 Hz above. Needs synced time. UK 6m: 50.293 MHz.</small>
     <label class="opt" data-for="fsk">Key-up shift, Hz above <input type="number" id="${name}_shift_hz" min="10" max="5000"></label>
     <button type="button" class="tx" id="${name}_tx">Transmit now</button>`;
   $("bands").appendChild(d);
@@ -158,10 +164,10 @@ function chip(text, cls) { return `<span class="chip ${cls || ""}">${text}</span
 function render() {
   const s = last;
   if (!s) return;
-  const air = s.band || s.queued;
+  const air = s.band || s.queued || s.waiting;
   $("status").innerHTML =
     chip(s.tx_enabled ? "TRANSMIT ENABLED" : "transmit off", s.tx_enabled ? "on" : "") +
-    chip(s.band ? "ON AIR: " + s.band : (s.queued ? "queued: " + s.queued : "idle"), s.band ? "air" : "") +
+    chip(s.band ? "ON AIR: " + s.band : (s.waiting ? "waiting for WSPR slot: " + s.waiting : (s.queued ? "queued: " + s.queued : "idle")), s.band ? "air" : "") +
     chip(s.clock.synced ? "UTC " + s.clock.utc.slice(11) : "time not synced", s.clock.synced ? "" : "bad") +
     chip("last tx: " + (s.last_tx_age_s == null ? "–" : s.last_tx_age_s + " s ago")) +
     chip(`${s.net.mode} ${s.net.ssid} ${s.net.ip}`) +
@@ -178,7 +184,7 @@ function render() {
     else if (dirty) why = "Save station settings first";
     b.disabled = !!why;
     b.title = why;
-    b.textContent = s.band === n ? "On air…" : (s.queued === n ? "Starting…" : "Transmit now");
+    b.textContent = s.band === n ? "On air…" : (s.waiting === n ? "Waiting for slot…" : (s.queued === n ? "Starting…" : "Transmit now"));
   }
   if (dirty) say("station_msg", "Unsaved changes", "warn");
   else if ($("station_msg").textContent === "Unsaved changes") say("station_msg", "");
@@ -213,7 +219,8 @@ $("save_station").addEventListener("click", async () => {
       duty_pct: num(n + "_duty_pct", n + " duty cycle"), shift_hz: num(n + "_shift_hz", n + " shift"),
       am_low_ma: num(n + "_am_low_ma", n + " low drive"), am_high_ma: num(n + "_am_high_ma", n + " high drive"),
       am_hz: num(n + "_am_hz", n + " tone"), am_duty_pct: num(n + "_am_duty_pct", n + " tone duty"),
-      fm_dev_hz: num(n + "_fm_dev_hz", n + " deviation"), fm_hz: num(n + "_fm_hz", n + " FM tone")};
+      fm_dev_hz: num(n + "_fm_dev_hz", n + " deviation"), fm_hz: num(n + "_fm_hz", n + " FM tone"),
+      wspr_dbm: num(n + "_wspr_dbm", n + " WSPR power"), wspr_every: num(n + "_wspr_every", n + " WSPR slots")};
     await api("/api/config", u);
     dirty = false;
     say("station_msg", "Saved", "ok");

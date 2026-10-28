@@ -13,8 +13,10 @@ would glitch the keying.
 import _thread
 import time
 
+import clock
 import config
 import morse
+import wspr
 
 
 def _wait_until(deadline):
@@ -39,7 +41,8 @@ class Beacon:
         self._lock = _thread.allocate_lock()
         self._pending = None
         self._manual = None  # band queued by request_tx()
-        self._state = {"band": None, "error": None, "cycles": 0, "last_tx_ms": None}
+        self._state = {"band": None, "waiting": None, "error": None, "cycles": 0,
+                       "last_tx_ms": None}
 
     # -- called from other cores ---------------------------------------------
 
@@ -67,7 +70,8 @@ class Beacon:
         if not self.tx_enabled:
             raise ValueError("transmit is not enabled")
         with self._lock:
-            if self._state["band"] is not None or self._manual is not None:
+            if (self._state["band"] is not None or self._state["waiting"] is not None
+                    or self._manual is not None):
                 raise ValueError("another transmission is already in progress")
             self._manual = name
 
@@ -113,12 +117,13 @@ class Beacon:
         """Send one transmission on a band, then switch every output off."""
         if not self.tx_enabled:
             return
-        self._set_state(band=name)
         cfg = self.cfg
+        mode = cfg["bands"][name]["mode"]
+        # WSPR waits for its time slot before it is "on air".
+        self._set_state(**({"waiting": name} if mode == "wspr" else {"band": name}))
         spec = config.BANDS[name]
         band = cfg["bands"][name]
         ch = spec["ch"]
-        mode = band["mode"]
         clk = self.clk
         try:
             clk.disable_all()
@@ -126,8 +131,8 @@ class Beacon:
             # start at their low level.
             clk.set_drive(ch, band["am_low_ma"] if mode in ("am", "mcw")
                           else config.DRIVE_MA)
-            clk.set_frequency(ch, band["freq"] // spec["mult"],
-                              pll=spec["pll"], enable=False)
+            freq = band["freq"] + (config.WSPR_OFFSET_HZ if mode == "wspr" else 0)
+            clk.set_frequency(ch, freq // spec["mult"], pll=spec["pll"], enable=False)
             self._wait_lock(spec["pll"])
             if mode == "morse":
                 self._send_morse(ch, config.message(cfg), cfg["wpm"])
@@ -145,11 +150,13 @@ class Beacon:
                 self._send_fm(spec, band)
             elif mode == "fmcw":
                 self._send_fmcw(spec, band, config.message(cfg), cfg["wpm"])
+            elif mode == "wspr":
+                self._send_wspr(name, spec, band, cfg)
             else:
                 self._send_fsk(spec, band, config.message(cfg), cfg["wpm"])
         finally:
             clk.disable_all()
-            self._set_state(band=None, last_tx_ms=time.ticks_ms())
+            self._set_state(band=None, waiting=None, last_tx_ms=time.ticks_ms())
 
     def _wait_lock(self, pll, timeout_ms=100):
         start = time.ticks_ms()
@@ -237,6 +244,41 @@ class Beacon:
             else:
                 _wait_until(deadline)
 
+    def _wait_wspr_start(self):
+        """Wait for second 1 of the next even UTC minute. False if stopped."""
+        deadline = time.ticks_add(time.ticks_ms(), 125000)
+        while self._active():
+            if int(time.time()) % 120 == 1:
+                return True
+            if time.ticks_diff(deadline, time.ticks_ms()) < 0:
+                raise OSError("WSPR slot not reached")
+            time.sleep_ms(5)
+        return False
+
+    def _send_wspr(self, name, spec, band, cfg):
+        """Send one WSPR message: 162 symbols of 4-FSK, 0.683 s each, starting
+        1 s into an even UTC minute. The output is tuned in millihertz because
+        the tones are only 1.46 Hz apart."""
+        if not clock.state["synced"]:
+            raise OSError("WSPR needs the time to be synced (NTP)")
+        ch = spec["ch"]
+        symbols = wspr.encode(cfg["callsign"], cfg["locator"], band["wspr_dbm"])
+        centre_mhz = (band["freq"] + config.WSPR_OFFSET_HZ) * 1000
+        tones = [self.clk.tuning_mhz(ch, centre_mhz + (2 * k - 3) * 375000 // 512)
+                 for k in range(4)]
+        self.clk.retune(ch, tones[symbols[0]])  # first tone, output still off
+        if not self._wait_wspr_start():
+            return
+        start = time.ticks_us()
+        self._set_state(waiting=None, band=name)
+        self.clk.enable(ch)
+        for i in range(1, wspr.SYMBOLS):
+            _wait_until(time.ticks_add(start, wspr.symbol_start_us(i)))
+            if not self._active():
+                return
+            self.clk.retune(ch, tones[symbols[i]])
+        _wait_until(time.ticks_add(start, wspr.symbol_start_us(wspr.SYMBOLS)))
+
     def _fm_tunings(self, spec, band):
         """Precomputed (centre, high, low) tunings for the FM modes."""
         ch, mult = spec["ch"], spec["mult"]
@@ -304,10 +346,26 @@ class Beacon:
             deadline = time.ticks_add(deadline, abs(element) * dit)
             _wait_until(deadline)
 
+    def _service_wspr(self):
+        """Start a WSPR transmission when a scheduled slot is about to begin.
+        transmit() prepares the tones, then waits for the exact second."""
+        if not self.tx_enabled or not clock.state["synced"]:
+            return
+        now = int(time.time())
+        for name in config.BAND_ORDER:
+            band = self.cfg["bands"][name]
+            if band["enabled"] and band["mode"] == "wspr":
+                period = 120 * band["wspr_every"]
+                into = now % period
+                if into == 0 or into >= period - 3:
+                    self._try_transmit(name)
+                    return
+
     def _pause(self, seconds):
         for _ in range(int(seconds * 10)):
             self._apply_pending()
             self._service_manual()
+            self._service_wspr()
             if not self._active():
                 return
             time.sleep_ms(100)
@@ -319,7 +377,9 @@ class Beacon:
             if not self._active():
                 break
             self._service_manual()
-            if self.cfg["bands"][name]["enabled"]:
+            self._service_wspr()
+            band = self.cfg["bands"][name]
+            if band["enabled"] and band["mode"] != "wspr":  # WSPR runs by the clock
                 if not self._try_transmit(name):
                     self._pause(5)
                     continue
