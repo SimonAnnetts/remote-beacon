@@ -14,20 +14,28 @@ BANDS = {
 }
 BAND_ORDER = ("6m", "2m", "70cm")
 
-MODES = ("morse", "carrier", "duty", "fsk")
+MODES = ("morse", "carrier", "duty", "fsk", "am", "mcw")
+
+# Default Si5351 output drive current in mA; AM modes switch between two.
+DRIVE_MA = 2
+DRIVE_STEPS = (2, 4, 6, 8)
+# Writing the drive register takes ~0.35 ms, so each half of an AM cycle must
+# last at least this long, in microseconds.
+AM_MIN_HALF_US = 600
 
 # Settings that may be changed through the web API.
 TOP_KEYS = ("callsign", "locator", "message", "wpm", "gap_s", "interval_s",
             "correction_ppb", "tx_enabled", "wifi_ssid", "wifi_password",
             "web_password", "ntp_host")
 BAND_KEYS = ("enabled", "mode", "freq", "carrier_s", "period_ms", "duty_pct",
-             "shift_hz")
+             "shift_hz", "am_low_ma", "am_high_ma", "am_hz", "am_duty_pct")
 SECRET_KEYS = ("wifi_password", "web_password")
 
 
 def _band(freq):
     return {"enabled": False, "mode": "morse", "freq": freq, "carrier_s": 5,
-            "period_ms": 1000, "duty_pct": 50, "shift_hz": 200}
+            "period_ms": 1000, "duty_pct": 50, "shift_hz": 200,
+            "am_low_ma": 2, "am_high_ma": 8, "am_hz": 400, "am_duty_pct": 50}
 
 
 def defaults():
@@ -53,6 +61,9 @@ def defaults():
         # Per band: carrier_s is the length of carrier and duty-cycle
         # transmissions; duty mode uses period_ms/duty_pct; fsk mode sends the
         # Morse message with key-up shifted shift_hz above the band frequency.
+        # am mode alternates the output drive between am_low_ma and am_high_ma
+        # at am_hz (am_duty_pct of each cycle high) for carrier_s seconds; mcw
+        # sends the Morse message with that amplitude-modulated tone on key-down.
         "bands": {
             "6m": _band(50050000),
             "2m": _band(144450000),
@@ -119,6 +130,17 @@ def validate(cfg):
                             ("duty_pct", 1, 99), ("shift_hz", 10, 5000)):
             if not _is_int(band[key]) or not lo <= band[key] <= hi:
                 raise ValueError("%s: %s must be %d-%d" % (name, key, lo, hi))
+        for key, lo, hi in (("am_hz", 20, 500), ("am_duty_pct", 10, 90)):
+            if not _is_int(band[key]) or not lo <= band[key] <= hi:
+                raise ValueError("%s: %s must be %d-%d" % (name, key, lo, hi))
+        for key in ("am_low_ma", "am_high_ma"):
+            if band[key] not in DRIVE_STEPS or isinstance(band[key], bool):
+                raise ValueError("%s: %s must be one of %s" % (name, key, DRIVE_STEPS))
+        if band["am_low_ma"] >= band["am_high_ma"]:
+            raise ValueError("%s: am_low_ma must be below am_high_ma" % name)
+        half = 1000000 // band["am_hz"] * min(band["am_duty_pct"], 100 - band["am_duty_pct"]) // 100
+        if half < AM_MIN_HALF_US:
+            raise ValueError("%s: that AM tone and duty cycle is too fast to key" % name)
         if band["mode"] == "fsk" and band["freq"] + band["shift_hz"] > spec["hi"]:
             raise ValueError("%s: frequency plus shift is above the band" % name)
 

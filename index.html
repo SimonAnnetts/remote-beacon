@@ -27,7 +27,7 @@ input[type=text],input[type=password],input[type=number],select{width:100%;paddi
 .fields{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
 .span2{grid-column:span 2}
 .bands{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.band{border:1px solid #ccd;border-radius:6px;padding:8px;display:grid;gap:6px;background:#fafbff}
+.band{border:1px solid #ccd;border-radius:6px;padding:8px;display:grid;gap:6px;align-content:start;background:#fafbff}
 .band.air{border-color:#e90;background:#fff4de}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .opt[hidden]{display:none}
@@ -78,7 +78,9 @@ small{color:#667;display:block;margin-top:6px;font-size:12px}
 </main>
 <script>
 const BANDS = {"6m":[50,52],"2m":[144,146],"70cm":[430,440]};
+const DRIVES = [2, 4, 6, 8].map(m => `<option value="${m}">${m} mA</option>`).join("");
 const $ = id => document.getElementById(id);
+const NUMERIC = ["carrier_s", "period_ms", "duty_pct", "shift_hz", "am_low_ma", "am_high_ma", "am_hz", "am_duty_pct"];
 let dirty = false, last = null;
 
 function say(id, text, cls) { const e = $(id); e.textContent = text; e.className = "msg " + (cls || ""); }
@@ -90,11 +92,19 @@ for (const name in BANDS) {
   d.innerHTML = `<h3>${name} <span class="badge" id="${name}_air" hidden>ON AIR</span></h3>
     <label class="chk"><input type="checkbox" id="${name}_enabled"> In the schedule</label>
     <label>Frequency, MHz (${lo}–${hi}) <input type="number" step="0.000001" id="${name}_freq"></label>
-    <label>Mode <select id="${name}_mode"><option value="morse">Morse ID (on/off)</option><option value="fsk">Morse ID (FSK)</option><option value="carrier">Carrier</option><option value="duty">Duty cycle</option></select></label>
-    <label class="opt" data-for="carrier duty">Length, s <input type="number" id="${name}_carrier_s" min="1" max="60"></label>
+    <label>Mode <select id="${name}_mode"><option value="morse">Morse ID (on/off)</option><option value="fsk">Morse ID (FSK)</option><option value="carrier">Carrier</option><option value="duty">Duty cycle</option><option value="am">AM carrier (two levels)</option><option value="mcw">Morse ID (AM tone)</option></select></label>
+    <label class="opt" data-for="carrier duty am">Length, s <input type="number" id="${name}_carrier_s" min="1" max="60"></label>
     <div class="two opt" data-for="duty">
       <label>Period, ms <input type="number" id="${name}_period_ms" min="50" max="60000"></label>
       <label>On, % <input type="number" id="${name}_duty_pct" min="1" max="99"></label>
+    </div>
+    <div class="two opt" data-for="am mcw">
+      <label>Low drive <select id="${name}_am_low_ma">${DRIVES}</select></label>
+      <label>High drive <select id="${name}_am_high_ma">${DRIVES}</select></label>
+    </div>
+    <div class="two opt" data-for="am mcw">
+      <label>Tone, Hz <input type="number" id="${name}_am_hz" min="20" max="500"></label>
+      <label>High, % of cycle <input type="number" id="${name}_am_duty_pct" min="10" max="90"></label>
     </div>
     <label class="opt" data-for="fsk">Key-up shift, Hz above <input type="number" id="${name}_shift_hz" min="10" max="5000"></label>
     <button type="button" class="tx" id="${name}_tx">Transmit now</button>`;
@@ -132,7 +142,7 @@ async function loadConfig() {
     $(n + "_enabled").checked = b.enabled;
     $(n + "_freq").value = (b.freq / 1e6).toFixed(6);
     $(n + "_mode").value = b.mode;
-    for (const k of ["carrier_s", "period_ms", "duty_pct", "shift_hz"]) $(n + "_" + k).value = b[k];
+    for (const k of NUMERIC) $(n + "_" + k).value = b[k];
     showOptions(n);
   }
   dirty = false;
@@ -196,7 +206,9 @@ $("save_station").addEventListener("click", async () => {
     for (const n in BANDS) u.bands[n] = {enabled: $(n + "_enabled").checked,
       freq: Math.round(num(n + "_freq", n + " frequency") * 1e6), mode: $(n + "_mode").value,
       carrier_s: num(n + "_carrier_s", n + " length"), period_ms: num(n + "_period_ms", n + " period"),
-      duty_pct: num(n + "_duty_pct", n + " duty cycle"), shift_hz: num(n + "_shift_hz", n + " shift")};
+      duty_pct: num(n + "_duty_pct", n + " duty cycle"), shift_hz: num(n + "_shift_hz", n + " shift"),
+      am_low_ma: num(n + "_am_low_ma", n + " low drive"), am_high_ma: num(n + "_am_high_ma", n + " high drive"),
+      am_hz: num(n + "_am_hz", n + " tone"), am_duty_pct: num(n + "_am_duty_pct", n + " tone duty")};
     await api("/api/config", u);
     dirty = false;
     say("station_msg", "Saved", "ok");

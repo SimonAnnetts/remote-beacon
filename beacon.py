@@ -118,19 +118,29 @@ class Beacon:
         spec = config.BANDS[name]
         band = cfg["bands"][name]
         ch = spec["ch"]
+        mode = band["mode"]
         clk = self.clk
         try:
             clk.disable_all()
+            # Every transmission starts from a known drive level; the AM modes
+            # start at their low level.
+            clk.set_drive(ch, band["am_low_ma"] if mode in ("am", "mcw")
+                          else config.DRIVE_MA)
             clk.set_frequency(ch, band["freq"] // spec["mult"],
                               pll=spec["pll"], enable=False)
             self._wait_lock(spec["pll"])
-            mode = band["mode"]
             if mode == "morse":
                 self._send_morse(ch, config.message(cfg), cfg["wpm"])
             elif mode == "carrier":
                 self._send_carrier(ch, band["carrier_s"])
             elif mode == "duty":
                 self._send_duty(ch, band)
+            elif mode == "am":
+                self.clk.enable(ch)
+                self._am_until(ch, band, time.ticks_add(
+                    time.ticks_us(), band["carrier_s"] * 1000000))
+            elif mode == "mcw":
+                self._send_mcw(ch, band, config.message(cfg), cfg["wpm"])
             else:
                 self._send_fsk(spec, band, config.message(cfg), cfg["wpm"])
         finally:
@@ -192,6 +202,36 @@ class Beacon:
             self.clk.enable(ch, False)
             t = time.ticks_add(t, period - on_us)
             _wait_until(t)
+
+    def _am_until(self, ch, band, end):
+        """Alternate the drive between its two levels until the ticks_us()
+        deadline end, starting at the high level."""
+        period = 1000000 // band["am_hz"]
+        high_us = period * band["am_duty_pct"] // 100
+        t = time.ticks_us()
+        while self._active() and time.ticks_diff(end, t) > 0:
+            self.clk.set_drive(ch, band["am_high_ma"])
+            t = time.ticks_add(t, high_us)
+            _wait_until(t if time.ticks_diff(end, t) > 0 else end)
+            self.clk.set_drive(ch, band["am_low_ma"])
+            t = time.ticks_add(t, period - high_us)
+            _wait_until(t if time.ticks_diff(end, t) > 0 else end)
+
+    def _send_mcw(self, ch, band, text, wpm):
+        """Morse where key-down is the amplitude-modulated tone and key-up is
+        no carrier."""
+        dit = morse.dit_us(wpm)
+        deadline = time.ticks_us()
+        for element in morse.timing(text):
+            if not self._active():
+                break
+            deadline = time.ticks_add(deadline, abs(element) * dit)
+            if element > 0:
+                self.clk.enable(ch)
+                self._am_until(ch, band, deadline)
+                self.clk.enable(ch, False)
+            else:
+                _wait_until(deadline)
 
     def _send_fsk(self, spec, band, text, wpm):
         """Send Morse as frequency shift keying: the carrier stays on, at the
