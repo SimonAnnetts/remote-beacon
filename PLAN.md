@@ -61,6 +61,20 @@ reject the fundamental wherever it lands.
   lowest frequency used, and make sure the filtered Si5351 output stays within its input
   rating. Amplifier harmonics are not removed by the filters that precede it, so a low-pass
   filter after the amp may still be needed depending on the measured result.
+- **Crosstalk between outputs.** Measured on the bench with CLK0/1/2 all running (2 mA drive,
+  10 dB pad): CLK1's third harmonic (3 x 144.5 = 433.5 MHz) appears on the CLK2 SMA at about
+  -70 dBm, ~36 dB below the wanted 435 MHz signal (-33.9 dBm). It disappears when CLK1 is
+  disabled. The third harmonic of any 2m frequency (432–438 MHz) lies inside the 70cm band, so
+  neither the 2m filter nor the SAW filter can remove it. Mitigation: never transmit two bands
+  at the same time (the scheduler time-multiplexes bands); improve layout/shielding if more
+  isolation is needed. The reverse also happens: CLK2's 145.0 MHz carrier appears on the CLK1
+  output at -58 dBm, ~30 dB below CLK1's 144.5 MHz (-27.5 dBm) and only 0.5 MHz away, in the 2m
+  band itself, so no filter can remove it. Firmware must therefore enable only one output at a
+  time. Optional hardware: switch each PGA-103+ supply from a spare GPIO so only the active
+  band's amplifier is powered.
+  Confirmed on the bench: with only CLK1 enabled, the 145 MHz leak disappears and the spurs
+  around the carrier (seen at 144.1/144.3/144.6/144.8 MHz, -59 to -64 dBm with all three
+  outputs running) fall to -70 dBm or lower (>=42 dB below the -27.5 dBm carrier, 10 dB pad).
 - **PLL allocation.** A MultiSynth can only divide fractionally when the divider is 8 or
   more, so with a 600–900 MHz VCO anything above 112.5 MHz must use an integer divider (6 for
   112.5–150 MHz) and be tuned by moving its PLL. 2m (CLK1) and the 70cm carrier (CLK2) therefore
@@ -148,6 +162,25 @@ frequency reference for calibrating the Si5351's crystal error.
   rather than locking the crystal. Measurement details (PWM counter or PIO) are to be worked
   out in the milestone.
 - Software time keeping can fall back to NTP over Wi-Fi if no GPS is fitted.
+
+## Bench results (Si5351 only, no filters or amplifiers)
+
+TinySA Ultra, 10 dB attenuator + DC block in line (add 10 dB for levels at the chip), all
+outputs at the default 2 mA drive, crystal correction 151.3 ppm applied. One output enabled at
+a time unless stated.
+
+| Output | Signal | Level | Notes |
+|--------|--------|-------|-------|
+| CLK0 | 50.2000 MHz | -23.9 dBm | Spurs <= -73 dBm (>= 49 dB down) |
+| CLK0 | 100.4 / 150.6 / 251 MHz | -45 / -34 / -35 dBm | 2nd / 3rd / 5th harmonics, ~21 / 10 / 11 dB below the carrier |
+| CLK1 | 144.5 MHz | -27.5 dBm | Spurs <= -70 dBm (all three outputs on: worse, see crosstalk) |
+| CLK2 | 145.0 MHz fundamental | -28 dBm | Must be rejected by the SAW filter |
+| CLK2 | 435.0 MHz (3rd harmonic) | -34.8 dBm | Only ~7 dB below the fundamental |
+| CLK2 | 434.6 / 435.3 MHz | -68 dBm | ~33 dB below wanted; other spurs <= -88 dBm |
+
+The 434.6/435.3 MHz spurs fall inside the SAW passband (133 kHz below and 100 kHz above the
+145 MHz fundamental before tripling) and are probably PLLB fractional-N spurs (VCO/xtal =
+34.8). Possible mitigation: choose the fractional denominator to move them.
 
 ## Milestones
 
