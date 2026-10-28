@@ -141,6 +141,10 @@ class Beacon:
                     time.ticks_us(), band["carrier_s"] * 1000000))
             elif mode == "mcw":
                 self._send_mcw(ch, band, config.message(cfg), cfg["wpm"])
+            elif mode == "fm":
+                self._send_fm(spec, band)
+            elif mode == "fmcw":
+                self._send_fmcw(spec, band, config.message(cfg), cfg["wpm"])
             else:
                 self._send_fsk(spec, band, config.message(cfg), cfg["wpm"])
         finally:
@@ -230,6 +234,53 @@ class Beacon:
                 self.clk.enable(ch)
                 self._am_until(ch, band, deadline)
                 self.clk.enable(ch, False)
+            else:
+                _wait_until(deadline)
+
+    def _fm_tunings(self, spec, band):
+        """Precomputed (centre, high, low) tunings for the FM modes."""
+        ch, mult = spec["ch"], spec["mult"]
+        freq, dev = band["freq"], band["fm_dev_hz"]
+        return (self.clk.tuning(ch, freq // mult),
+                self.clk.tuning(ch, (freq + dev) // mult),
+                self.clk.tuning(ch, (freq - dev) // mult))
+
+    def _fm_until(self, ch, tunings, band, end):
+        """Alternate between the high and low frequency (a square-wave tone)
+        until the ticks_us() deadline end, then return to the centre."""
+        centre, high, low = tunings
+        half = 1000000 // band["fm_hz"] // 2
+        t = time.ticks_us()
+        while self._active() and time.ticks_diff(end, t) > 0:
+            self.clk.retune(ch, high)
+            t = time.ticks_add(t, half)
+            _wait_until(t if time.ticks_diff(end, t) > 0 else end)
+            self.clk.retune(ch, low)
+            t = time.ticks_add(t, half)
+            _wait_until(t if time.ticks_diff(end, t) > 0 else end)
+        self.clk.retune(ch, centre)
+
+    def _send_fm(self, spec, band):
+        ch = spec["ch"]
+        tunings = self._fm_tunings(spec, band)
+        self.clk.enable(ch)
+        self._fm_until(ch, tunings, band, time.ticks_add(
+            time.ticks_us(), band["carrier_s"] * 1000000))
+
+    def _send_fmcw(self, spec, band, text, wpm):
+        """Morse with an FM tone on key-down; the carrier stays on at the
+        centre frequency during key-up."""
+        ch = spec["ch"]
+        tunings = self._fm_tunings(spec, band)
+        dit = morse.dit_us(wpm)
+        deadline = time.ticks_us()
+        self.clk.enable(ch)
+        for element in morse.timing(text):
+            if not self._active():
+                break
+            deadline = time.ticks_add(deadline, abs(element) * dit)
+            if element > 0:
+                self._fm_until(ch, tunings, band, deadline)
             else:
                 _wait_until(deadline)
 

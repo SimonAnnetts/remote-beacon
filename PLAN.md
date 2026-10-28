@@ -126,16 +126,34 @@ Cores communicate through a small shared state object (the current config snapsh
 | `wifi.py` | Join the configured network, else a setup access point |
 | `bringup.py` | Hardware bring-up test of the three Si5351 outputs |
 | `wspr.py` | WSPR message encoding (later) |
+| `clock.py` | NTP time sync and UTC status |
 
 ## Modulation modes
 
-1. **Carrier** – unmodulated, continuous.
-2. **OOK / Morse** – carrier on/off keyed with the station ID or a configurable message.
-3. **Duty cycle** – on/off with a variable duty cycle and period (simple identifiable beacon).
-4. **FSK** – shift the output frequency between two (or more) tones, e.g. a CW-style
-   FSK ID or slow data.
-5. **WSPR** (stretch) – 4-FSK, 162 symbols at ~1.4648 baud, time-synchronised to even
-   2-minute boundaries (needs NTP time over Wi-Fi). Encoding must be implemented on-device.
+Implemented (mode names as in the web UI):
+
+1. **Carrier** – unmodulated, for a set length.
+2. **Morse ID (on/off)** – carrier gated by the output enable.
+3. **Duty cycle** – on/off at a set period and percentage, for a set length.
+4. **Morse ID (FSK)** – carrier always on; key-down at the band frequency, key-up a set
+   shift (10 Hz to 5 kHz) above. A retune takes 1.5–3.8 ms.
+5. **AM carrier (two levels)** and **Morse ID (AM tone)** – crude amplitude modulation by
+   switching the output drive between two of 2/4/6/8 mA at 20–500 Hz. The drive write takes
+   ~0.34 ms, so each half cycle must be at least 600 µs. Measured at 50 MHz (10 dB pad):
+   -22 / -17 / -14 / -12 dBm for 2 / 4 / 6 / 8 mA, so 2 mA with 8 mA gives ~52% depth and the
+   steps shrink at higher drive. Depth on 2m and 70cm still to be measured.
+6. **FM carrier (square-wave tone)** and **Morse ID (FM tone)** – the frequency alternates
+   between the band frequency plus and minus a deviation (±100 Hz to 10 kHz) at 20–500 Hz. Each
+   step is a single precomputed 8-byte I2C write (~0.39 ms on all three bands). The Morse ID
+   version keys the tone and leaves the carrier on during key-up. Verified on 6m with ±3 kHz
+   at 400 Hz: two clean lobes at the right spacing, ~30 dB below them in between. On 70cm the
+   deviation is tripled by the harmonic, so the board sets the carrier deviation to a third.
+
+To do:
+
+7. **WSPR** (stretch) – 4-FSK, 162 symbols at ~1.4648 baud, time-synchronised to even
+   2-minute boundaries. NTP time is already available (`clock.py`); the encoder and tone
+   timing must be implemented on-device.
 
 Each band is configured independently (enabled, frequency, mode, message, schedule).
 
@@ -193,7 +211,7 @@ The 434.6/435.3 MHz spurs fall inside the SAW passband (133 kHz below and 100 kH
 4. ~~Morse ID and on/off modulation on core 1~~ ✔ (one band at a time; key-click shaping to revisit with filters and amplifiers fitted)
 5. ~~Wi-Fi + minimal web server on core 0 with config persistence~~ ✔
 6. ~~Full web UI with per-band configuration and authentication~~ ✔ (Basic auth over plain HTTP: trusted LAN only)
-7. Duty-cycle and FSK modes.
+7. ~~Duty-cycle and FSK modes~~ ✔, plus AM and FM modes and NTP time (`clock.py`) ✔
 8. WSPR (NTP time sync, encoding, symbol timing).
 9. GPS: UART/NMEA time, 1PPS capture, ppm calibration, safety limits, documentation.
 

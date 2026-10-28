@@ -14,7 +14,7 @@ BANDS = {
 }
 BAND_ORDER = ("6m", "2m", "70cm")
 
-MODES = ("morse", "carrier", "duty", "fsk", "am", "mcw")
+MODES = ("morse", "carrier", "duty", "fsk", "am", "mcw", "fm", "fmcw")
 
 # Default Si5351 output drive current in mA; AM modes switch between two.
 DRIVE_MA = 2
@@ -22,20 +22,24 @@ DRIVE_STEPS = (2, 4, 6, 8)
 # Writing the drive register takes ~0.35 ms, so each half of an AM cycle must
 # last at least this long, in microseconds.
 AM_MIN_HALF_US = 600
+# An FM retune is one 8-byte I2C write, ~0.4 ms, so half a cycle must be longer.
+FM_MIN_HALF_US = 1000
 
 # Settings that may be changed through the web API.
 TOP_KEYS = ("callsign", "locator", "message", "wpm", "gap_s", "interval_s",
             "correction_ppb", "tx_enabled", "wifi_ssid", "wifi_password",
             "web_password", "ntp_host")
 BAND_KEYS = ("enabled", "mode", "freq", "carrier_s", "period_ms", "duty_pct",
-             "shift_hz", "am_low_ma", "am_high_ma", "am_hz", "am_duty_pct")
+             "shift_hz", "am_low_ma", "am_high_ma", "am_hz", "am_duty_pct",
+             "fm_dev_hz", "fm_hz")
 SECRET_KEYS = ("wifi_password", "web_password")
 
 
 def _band(freq):
     return {"enabled": False, "mode": "morse", "freq": freq, "carrier_s": 5,
             "period_ms": 1000, "duty_pct": 50, "shift_hz": 200,
-            "am_low_ma": 2, "am_high_ma": 8, "am_hz": 400, "am_duty_pct": 50}
+            "am_low_ma": 2, "am_high_ma": 8, "am_hz": 400, "am_duty_pct": 50,
+            "fm_dev_hz": 3000, "fm_hz": 400}
 
 
 def defaults():
@@ -64,6 +68,10 @@ def defaults():
         # am mode alternates the output drive between am_low_ma and am_high_ma
         # at am_hz (am_duty_pct of each cycle high) for carrier_s seconds; mcw
         # sends the Morse message with that amplitude-modulated tone on key-down.
+        # fm mode shifts the frequency fm_dev_hz either side of the band
+        # frequency, as a square wave at fm_hz, for carrier_s seconds; fmcw
+        # sends the Morse message with that FM tone on key-down and the plain
+        # carrier left on during key-up.
         "bands": {
             "6m": _band(50050000),
             "2m": _band(144450000),
@@ -141,6 +149,15 @@ def validate(cfg):
         half = 1000000 // band["am_hz"] * min(band["am_duty_pct"], 100 - band["am_duty_pct"]) // 100
         if half < AM_MIN_HALF_US:
             raise ValueError("%s: that AM tone and duty cycle is too fast to key" % name)
+        for key, lo, hi in (("fm_dev_hz", 100, 10000), ("fm_hz", 20, 500)):
+            if not _is_int(band[key]) or not lo <= band[key] <= hi:
+                raise ValueError("%s: %s must be %d-%d" % (name, key, lo, hi))
+        if 1000000 // band["fm_hz"] // 2 < FM_MIN_HALF_US:
+            raise ValueError("%s: that FM tone is too fast to key" % name)
+        if band["mode"] in ("fm", "fmcw") and not (
+                spec["lo"] <= band["freq"] - band["fm_dev_hz"]
+                and band["freq"] + band["fm_dev_hz"] <= spec["hi"]):
+            raise ValueError("%s: frequency plus or minus the deviation leaves the band" % name)
         if band["mode"] == "fsk" and band["freq"] + band["shift_hz"] > spec["hi"]:
             raise ValueError("%s: frequency plus shift is above the band" % name)
 

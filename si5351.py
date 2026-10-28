@@ -99,6 +99,7 @@ class Si5351:
         self._actual = [0, 0, 0]
         self._drive = [2, 2, 2]
         self._int_mode = [False, False, False]
+        self._div = [0, 0, 0]  # integer MultiSynth divider of an owner output
         self._oe = 0xFF  # 1 = output disabled
 
         if addr not in i2c.scan():
@@ -214,6 +215,7 @@ class Si5351:
             raise ValueError("PLL%s is already owned by CLK%d"
                              % ("AB"[pll], self._owner[pll]))
         div, div4 = (6, False) if hz <= 150 * _MHZ else (4, True)
+        self._div[ch] = div
         plan = self._plan_pll(div * hz)
         vco = plan[3]
         # Check dependents on this PLL can follow before touching anything.
@@ -241,7 +243,42 @@ class Si5351:
         self._release(ch)
         self._pll_of[ch] = pll
         self._target[ch] = hz
+        self._div[ch] = 0
         self._write_ms(ch, *plan)
+
+    def tuning(self, ch, hz):
+        """Precompute a fast retune of an already configured output.
+
+        Returns an opaque value for retune(). Doing the maths here lets
+        retune() be a single I2C write, fast enough to alternate between two
+        frequencies hundreds of times a second (FM). The new frequency must
+        use the same kind of divider as the current one.
+        """
+        hz = int(hz)
+        pll = self._pll_of[ch]
+        if pll is None:
+            raise ValueError("CLK%d has not been set up with set_frequency" % ch)
+        if self._owner[pll] == ch:
+            div = 6 if hz <= 150 * _MHZ else 4
+            if hz > _OUT_MAX_HZ or hz <= _OWNER_MIN_HZ or div != self._div[ch]:
+                raise ValueError("%d Hz needs a full set_frequency" % hz)
+            a, b, c, vco = self._plan_pll(div * hz)
+            out = (vco + div // 2) // div
+            return (_REG_PLL_BASE[pll], _encode(a, b, c), pll, vco, out, hz)
+        vco = self._pll_hz[pll]
+        a, b, c = self._plan_dependent(vco, hz)
+        if (b == 0) != self._int_mode[ch]:
+            raise ValueError("%d Hz needs a full set_frequency" % hz)
+        return (_REG_MS_BASE[ch], _encode(a, b, c), None, vco, self._output_hz(vco, a, b, c), hz)
+
+    def retune(self, ch, tuning):
+        """Apply a tuning() result with one I2C write. No PLL reset."""
+        reg, data, pll, vco, out, hz = tuning
+        self.i2c.writeto_mem(self.addr, reg, data)
+        if pll is not None:
+            self._pll_hz[pll] = vco
+        self._actual[ch] = out
+        self._target[ch] = hz
 
     def _release(self, ch):
         for pll in (0, 1):
