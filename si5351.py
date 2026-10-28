@@ -180,12 +180,14 @@ class Si5351:
 
     # -- public API --------------------------------------------------------
 
-    def set_frequency(self, ch, hz, pll=None, reset=True):
-        """Set CLK<ch> to hz and enable it. Returns the actual frequency in Hz.
+    def set_frequency(self, ch, hz, pll=None, reset=True, enable=True):
+        """Set CLK<ch> to hz and (by default) enable it. Returns the actual
+        frequency in Hz.
 
         pll selects PLLA/PLLB for this output (default: the one it already
         uses, else PLLA). reset=False skips the PLL reset, which avoids a
-        glitch for small retunes such as FSK.
+        glitch for small retunes such as FSK. enable=False leaves the output
+        in its current on/off state so the caller can key it.
         """
         hz = int(hz)
         if not 0 <= ch <= 2:
@@ -203,7 +205,8 @@ class Si5351:
         self._write_clk_control(ch)
         if reset:
             self._write(_REG_PLL_RESET, bytes((_PLL_RESET_BIT[pll],)))
-        self.enable(ch)
+        if enable:
+            self.enable(ch)
         return self._actual[ch]
 
     def _set_owner(self, ch, hz, pll):
@@ -280,6 +283,15 @@ class Si5351:
             "los_xtal": bool(s & 0x08),
         }
 
-    def locked(self):
+    def locked(self, pll=None):
+        """True if the crystal is present and the PLL (or both) is locked.
+
+        An unconfigured PLL reports loss of lock, so pass pll to check only
+        the one in use.
+        """
         s = self.status()
-        return not (s["lol_a"] or s["lol_b"] or s["los_xtal"])
+        if s["los_xtal"]:
+            return False
+        if pll is None:
+            return not (s["lol_a"] or s["lol_b"])
+        return not s["lol_b" if pll == self.PLLB else "lol_a"]
