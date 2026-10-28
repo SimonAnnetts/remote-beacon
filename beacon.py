@@ -127,10 +127,10 @@ class Beacon:
         clk = self.clk
         try:
             clk.disable_all()
-            # Every transmission starts from a known drive level; the AM modes
-            # start at their low level.
+            # Every transmission starts from a known drive level: the band's
+            # setting, or for the AM modes their low level.
             clk.set_drive(ch, band["am_low_ma"] if mode in ("am", "mcw")
-                          else config.DRIVE_MA)
+                          else band["drive_ma"])
             freq = band["freq"] + (config.WSPR_OFFSET_HZ if mode == "wspr" else 0)
             clk.set_frequency(ch, freq // spec["mult"], pll=spec["pll"], enable=False)
             self._wait_lock(spec["pll"])

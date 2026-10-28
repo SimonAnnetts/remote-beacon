@@ -21,7 +21,8 @@ MODES = ("morse", "carrier", "duty", "fsk", "am", "mcw", "fm", "fmcw", "wspr")
 # WSPR tones sit this far above the dial frequency (the middle of the audio band).
 WSPR_OFFSET_HZ = 1500
 
-# Default Si5351 output drive current in mA; AM modes switch between two.
+# Default Si5351 output drive current in mA (each band can set its own). The AM
+# modes switch between two levels of their own.
 DRIVE_MA = 2
 DRIVE_STEPS = (2, 4, 6, 8)
 # Writing the drive register takes ~0.35 ms, so each half of an AM cycle must
@@ -36,7 +37,7 @@ TOP_KEYS = ("callsign", "locator", "message", "wpm", "gap_s", "interval_s",
             "web_password", "ntp_host")
 BAND_KEYS = ("enabled", "mode", "freq", "carrier_s", "period_ms", "duty_pct",
              "shift_hz", "am_low_ma", "am_high_ma", "am_hz", "am_duty_pct",
-             "fm_dev_hz", "fm_hz", "wspr_dbm", "wspr_every")
+             "fm_dev_hz", "fm_hz", "wspr_dbm", "wspr_every", "drive_ma")
 SECRET_KEYS = ("wifi_password", "web_password")
 
 
@@ -44,7 +45,7 @@ def _band(freq):
     return {"enabled": False, "mode": "morse", "freq": freq, "carrier_s": 5,
             "period_ms": 1000, "duty_pct": 50, "shift_hz": 200,
             "am_low_ma": 2, "am_high_ma": 8, "am_hz": 400, "am_duty_pct": 50,
-            "fm_dev_hz": 3000, "fm_hz": 400, "wspr_dbm": 10, "wspr_every": 5}
+            "fm_dev_hz": 3000, "fm_hz": 400, "wspr_dbm": 10, "wspr_every": 5, "drive_ma": DRIVE_MA}
 
 
 def defaults():
@@ -70,6 +71,7 @@ def defaults():
         # Per band: carrier_s is the length of carrier and duty-cycle
         # transmissions; duty mode uses period_ms/duty_pct; fsk mode sends the
         # Morse message with key-up shifted shift_hz above the band frequency.
+        # drive_ma is the output drive for every mode except am and mcw.
         # am mode alternates the output drive between am_low_ma and am_high_ma
         # at am_hz (am_duty_pct of each cycle high) for carrier_s seconds; mcw
         # sends the Morse message with that amplitude-modulated tone on key-down.
@@ -149,7 +151,7 @@ def validate(cfg):
         for key, lo, hi in (("am_hz", 20, 500), ("am_duty_pct", 10, 90)):
             if not _is_int(band[key]) or not lo <= band[key] <= hi:
                 raise ValueError("%s: %s must be %d-%d" % (name, key, lo, hi))
-        for key in ("am_low_ma", "am_high_ma"):
+        for key in ("drive_ma", "am_low_ma", "am_high_ma"):
             if band[key] not in DRIVE_STEPS or isinstance(band[key], bool):
                 raise ValueError("%s: %s must be one of %s" % (name, key, DRIVE_STEPS))
         if band["am_low_ma"] >= band["am_high_ma"]:

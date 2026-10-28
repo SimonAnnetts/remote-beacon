@@ -81,7 +81,7 @@ const BANDS = {"6m":[50,52],"2m":[144,146],"70cm":[430,440]};
 const POWERS = [0,3,7,10,13,17,20,23,27,30,33,37,40,43,47,50,53,57,60].map(p => `<option value="${p}">${p} dBm</option>`).join("");
 const DRIVES = [2, 4, 6, 8].map(m => `<option value="${m}">${m} mA</option>`).join("");
 const $ = id => document.getElementById(id);
-const NUMERIC = ["carrier_s", "period_ms", "duty_pct", "shift_hz", "am_low_ma", "am_high_ma", "am_hz", "am_duty_pct", "fm_dev_hz", "fm_hz", "wspr_dbm", "wspr_every"];
+const NUMERIC = ["carrier_s", "period_ms", "duty_pct", "shift_hz", "am_low_ma", "am_high_ma", "am_hz", "am_duty_pct", "fm_dev_hz", "fm_hz", "wspr_dbm", "wspr_every", "drive_ma"];
 let dirty = false, last = null;
 
 function say(id, text, cls) { const e = $(id); e.textContent = text; e.className = "msg " + (cls || ""); }
@@ -93,6 +93,7 @@ for (const name in BANDS) {
   d.innerHTML = `<h3>${name} <span class="badge" id="${name}_air" hidden>ON AIR</span></h3>
     <label class="chk"><input type="checkbox" id="${name}_enabled"> In the schedule</label>
     <label>Frequency, MHz (${lo}–${hi}) <input type="number" step="0.000001" id="${name}_freq"></label>
+    <label class="opt" data-for="morse carrier duty fsk fm fmcw wspr">Output drive <select id="${name}_drive_ma">${DRIVES}</select></label>
     <label>Mode <select id="${name}_mode"><option value="morse">Morse ID (on/off)</option><option value="fsk">Morse ID (FSK)</option><option value="carrier">Carrier</option><option value="duty">Duty cycle</option><option value="am">AM carrier (two levels)</option><option value="mcw">Morse ID (AM tone)</option><option value="fm">FM carrier (square-wave tone)</option><option value="fmcw">Morse ID (FM tone)</option>${name === "6m" ? '<option value="wspr">WSPR</option>' : ""}</select></label>
     <label class="opt" data-for="carrier duty am fm">Length, s <input type="number" id="${name}_carrier_s" min="1" max="60"></label>
     <div class="two opt" data-for="duty">
@@ -220,7 +221,8 @@ $("save_station").addEventListener("click", async () => {
       am_low_ma: num(n + "_am_low_ma", n + " low drive"), am_high_ma: num(n + "_am_high_ma", n + " high drive"),
       am_hz: num(n + "_am_hz", n + " tone"), am_duty_pct: num(n + "_am_duty_pct", n + " tone duty"),
       fm_dev_hz: num(n + "_fm_dev_hz", n + " deviation"), fm_hz: num(n + "_fm_hz", n + " FM tone"),
-      wspr_dbm: num(n + "_wspr_dbm", n + " WSPR power"), wspr_every: num(n + "_wspr_every", n + " WSPR slots")};
+      wspr_dbm: num(n + "_wspr_dbm", n + " WSPR power"), wspr_every: num(n + "_wspr_every", n + " WSPR slots"),
+      drive_ma: num(n + "_drive_ma", n + " output drive")};
     await api("/api/config", u);
     dirty = false;
     say("station_msg", "Saved", "ok");
