@@ -1,5 +1,6 @@
 """Beacon configuration: band definitions, defaults, validation, persistence."""
 import json
+import os
 
 CONFIG_FILE = "config.json"
 
@@ -15,19 +16,33 @@ BAND_ORDER = ("6m", "2m", "70cm")
 
 MODES = ("morse", "carrier")
 
+# Settings that may be changed through the web API.
+TOP_KEYS = ("callsign", "locator", "message", "wpm", "gap_s", "interval_s",
+            "correction_ppb", "tx_enabled", "wifi_ssid", "wifi_password",
+            "web_password")
+BAND_KEYS = ("enabled", "mode", "freq", "carrier_s")
+SECRET_KEYS = ("wifi_password", "web_password")
+
 
 def defaults():
     return {
-        "callsign": "",
-        "locator": "",
+        "callsign": "GW3ACE",
+        "locator": "IO82gh",
         # Template for the Morse ID.
         "message": "VVV DE {call} {loc}",
         "wpm": 12,
+        # Master transmit switch. Off until deliberately enabled.
+        "tx_enabled": False,
         # Measured crystal error in ppb; 151300 is this development board.
         "correction_ppb": 151300,
         # Seconds between transmissions of consecutive bands, and between cycles.
         "gap_s": 2,
         "interval_s": 30,
+        "wifi_ssid": "",
+        "wifi_password": "",
+        # Required for the web interface and used as the setup access point's
+        # WPA2 key, so at least 8 characters.
+        "web_password": "",
         "bands": {
             "6m": {"enabled": False, "mode": "morse", "freq": 50050000, "carrier_s": 5},
             "2m": {"enabled": False, "mode": "morse", "freq": 144450000, "carrier_s": 5},
@@ -36,28 +51,92 @@ def defaults():
     }
 
 
-def validate(cfg):
-    """Raise ValueError if cfg could not be transmitted safely."""
-    call = cfg.get("callsign", "")
-    if not call or not all(c.isalpha() or c.isdigit() or c == "/" for c in call):
-        raise ValueError("a callsign is required (letters, digits and / only)")
-    if not 5 <= cfg["wpm"] <= 30:
-        raise ValueError("wpm must be 5-30")
-    if cfg["gap_s"] < 0 or cfg["interval_s"] < 0:
-        raise ValueError("gap_s and interval_s must not be negative")
-    for name, spec in BANDS.items():
-        band = cfg["bands"][name]
-        if band["mode"] not in MODES:
-            raise ValueError("%s: mode must be one of %s" % (name, MODES))
-        if not spec["lo"] <= band["freq"] <= spec["hi"]:
-            raise ValueError("%s: %d Hz is outside %d-%d Hz"
-                             % (name, band["freq"], spec["lo"], spec["hi"]))
-        if not 0 < band["carrier_s"] <= 60:
-            raise ValueError("%s: carrier_s must be 1-60" % name)
+def _is_int(value):
+    return isinstance(value, int) and not isinstance(value, bool)
 
 
 def message(cfg):
     return cfg["message"].format(call=cfg["callsign"], loc=cfg["locator"])
+
+
+def validate(cfg):
+    """Raise ValueError if cfg is invalid. A callsign is only required once
+    transmitting is enabled, so a half-finished setup can still be saved."""
+    call = cfg["callsign"]
+    if not isinstance(call, str) or len(call) > 12 or not all(
+            c.isalpha() or c.isdigit() or c == "/" for c in call):
+        raise ValueError("callsign: letters, digits and / only")
+    loc = cfg["locator"]
+    if not isinstance(loc, str) or len(loc) > 8 or not all(
+            c.isalpha() or c.isdigit() for c in loc):
+        raise ValueError("locator: letters and digits only")
+    if not isinstance(cfg["tx_enabled"], bool):
+        raise ValueError("tx_enabled must be true or false")
+    if cfg["tx_enabled"] and not call:
+        raise ValueError("a callsign is required to enable transmitting")
+    try:
+        text = message(cfg)
+    except (KeyError, IndexError, ValueError, AttributeError):
+        raise ValueError("message: only {call} and {loc} may be used")
+    if len(text) > 80:
+        raise ValueError("message is too long (80 characters maximum)")
+    for key, lo, hi in (("wpm", 5, 30), ("gap_s", 0, 3600), ("interval_s", 0, 86400),
+                        ("correction_ppb", -1000000, 1000000)):
+        if not _is_int(cfg[key]) or not lo <= cfg[key] <= hi:
+            raise ValueError("%s must be a whole number %d to %d" % (key, lo, hi))
+    ssid, wpass, apass = cfg["wifi_ssid"], cfg["wifi_password"], cfg["web_password"]
+    if not all(isinstance(v, str) for v in (ssid, wpass, apass)):
+        raise ValueError("wifi and web settings must be text")
+    if len(ssid) > 32:
+        raise ValueError("wifi_ssid is too long")
+    if wpass and not 8 <= len(wpass) <= 63:
+        raise ValueError("wifi_password must be 8-63 characters")
+    if apass and not 8 <= len(apass) <= 63:
+        raise ValueError("web_password must be 8-63 characters")
+    for name, spec in BANDS.items():
+        band = cfg["bands"][name]
+        if not isinstance(band["enabled"], bool):
+            raise ValueError("%s: enabled must be true or false" % name)
+        if band["mode"] not in MODES:
+            raise ValueError("%s: mode must be one of %s" % (name, MODES))
+        if not _is_int(band["freq"]) or not spec["lo"] <= band["freq"] <= spec["hi"]:
+            raise ValueError("%s: frequency must be %d-%d Hz"
+                             % (name, spec["lo"], spec["hi"]))
+        if not _is_int(band["carrier_s"]) or not 1 <= band["carrier_s"] <= 60:
+            raise ValueError("%s: carrier_s must be 1-60" % name)
+
+
+def copy(cfg):
+    return json.loads(json.dumps(cfg))
+
+
+def merge(cfg, update):
+    """Return a validated copy of cfg with the web-settable keys of update
+    applied. Unknown keys are rejected."""
+    new = copy(cfg)
+    for key, value in update.items():
+        if key == "bands":
+            for name, band_update in value.items():
+                if name not in new["bands"]:
+                    raise ValueError("unknown band " + name)
+                for bkey, bvalue in band_update.items():
+                    if bkey not in BAND_KEYS:
+                        raise ValueError("unknown band setting " + bkey)
+                    new["bands"][name][bkey] = bvalue
+        elif key in TOP_KEYS:
+            new[key] = value
+        else:
+            raise ValueError("unknown setting " + key)
+    validate(new)
+    return new
+
+
+def public(cfg):
+    """cfg without secrets, for sending to the web interface."""
+    out = copy(cfg)
+    for key in SECRET_KEYS:
+        out[key + "_set"] = bool(out.pop(key))
+    return out
 
 
 def load(path=CONFIG_FILE):
@@ -77,6 +156,9 @@ def load(path=CONFIG_FILE):
 
 
 def save(cfg, path=CONFIG_FILE):
+    """Validate and write cfg, replacing the old file only once complete."""
     validate(cfg)
-    with open(path, "w") as f:
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
         json.dump(cfg, f)
+    os.rename(tmp, path)

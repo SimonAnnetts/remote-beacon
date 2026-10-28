@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Remote Beacon</title>
+<style>
+*{box-sizing:border-box}
+body{font:14px/1.3 system-ui,sans-serif;margin:0;padding:10px 14px;max-width:1280px;margin:0 auto;background:#f4f5f7;color:#222}
+header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:8px}
+h1{font-size:20px;margin:0}
+#status{flex:1;display:flex;gap:6px;flex-wrap:wrap}
+.chip{background:#fff;border:1px solid #ccd;border-radius:12px;padding:2px 10px;white-space:nowrap}
+.chip.on{background:#d8f5d8;border-color:#7c7;font-weight:600}
+.chip.air{background:#ffe3b3;border-color:#e90;font-weight:700}
+.chip.bad{background:#fdd;border-color:#c66}
+#stop{background:#b00;color:#fff;font-size:16px;font-weight:700;padding:8px 18px;border:0;border-radius:6px;cursor:pointer}
+#stop:hover{background:#d00}
+main{display:grid;grid-template-columns:1fr 270px;gap:10px;align-items:start}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+section{background:#fff;border:1px solid #ccd;border-radius:8px;padding:10px 12px}
+h2{font-size:14px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.05em;color:#556}
+label{display:block;font-size:12px;color:#445}
+input[type=text],input[type=password],input[type=number],select{width:100%;padding:4px 6px;font-size:14px;border:1px solid #aab;border-radius:4px;background:#fff}
+.master{display:flex;align-items:center;gap:8px;background:#eef;border-radius:6px;padding:6px 10px;margin-bottom:8px;font-size:14px}
+.master input{width:18px;height:18px}
+.fields{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.span2{grid-column:span 2}
+.bands{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.band{border:1px solid #ccd;border-radius:6px;padding:8px;display:grid;gap:6px;background:#fafbff}
+.band.air{border-color:#e90;background:#fff4de}
+.band h3{margin:0;font-size:16px;display:flex;justify-content:space-between;align-items:center}
+.badge{font-size:11px;background:#e90;color:#fff;border-radius:8px;padding:1px 8px}
+.chk{display:flex;align-items:center;gap:6px;font-size:13px;color:#222}
+.tx{padding:7px;font-size:14px;font-weight:600;border:1px solid #258;background:#2a6fd1;color:#fff;border-radius:5px;cursor:pointer}
+.tx:disabled{background:#dde;border-color:#bbc;color:#889;cursor:not-allowed}
+.save{margin-top:10px;display:flex;align-items:center;gap:10px}
+.save button{padding:7px 18px;font-size:14px;font-weight:600;border:0;border-radius:5px;background:#157;color:#fff;cursor:pointer}
+.msg{font-weight:600;font-size:13px}
+.err{color:#b00}.ok{color:#080}.warn{color:#b60}
+.net label{margin-bottom:8px}
+small{color:#667;display:block;margin-top:6px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+<h1>Remote Beacon</h1>
+<div id="status"><span class="chip">loading…</span></div>
+<button id="stop" type="button">EMERGENCY STOP</button>
+</header>
+<div id="topmsg" class="msg"></div>
+<main>
+<section id="station">
+<h2>Station</h2>
+<label class="master"><input type="checkbox" id="tx_enabled"> <b>Transmit enabled</b> <span>(applies immediately; untick to stop all transmitting)</span></label>
+<div class="fields">
+<label>Callsign <input type="text" id="callsign"></label>
+<label>Locator <input type="text" id="locator"></label>
+<label>Morse speed (wpm) <input type="number" id="wpm" min="5" max="30"></label>
+<label>Seconds between bands <input type="number" id="gap_s" min="0"></label>
+<label class="span2">Message ({call} and {loc} are replaced) <input type="text" id="message"></label>
+<label>Seconds between cycles <input type="number" id="interval_s" min="0"></label>
+</div>
+<div class="bands" id="bands"></div>
+<div class="save"><button type="button" id="save_station">Save station</button><span id="station_msg" class="msg"></span></div>
+</section>
+<section id="network" class="net">
+<h2>Network</h2>
+<label>Wi-Fi network <input type="text" id="wifi_ssid"></label>
+<label>Wi-Fi password <input type="password" id="wifi_password" autocomplete="new-password" placeholder="(unchanged)"></label>
+<label>Web / setup password <input type="password" id="web_password" autocomplete="new-password" placeholder="(unchanged, 8+ chars)"></label>
+<div class="save"><button type="button" id="save_network">Save network</button><span id="network_msg" class="msg"></span></div>
+<small>Network changes apply after a reboot. A new web password takes effect straight away, and the browser will ask you to sign in again.</small>
+</section>
+</main>
+<script>
+const BANDS = {"6m":[50,52],"2m":[144,146],"70cm":[430,440]};
+const $ = id => document.getElementById(id);
+let dirty = false, last = null;
+
+function say(id, text, cls) { const e = $(id); e.textContent = text; e.className = "msg " + (cls || ""); }
+
+for (const name in BANDS) {
+  const [lo, hi] = BANDS[name];
+  const d = document.createElement("div");
+  d.className = "band"; d.id = "band_" + name;
+  d.innerHTML = `<h3>${name} <span class="badge" id="${name}_air" hidden>ON AIR</span></h3>
+    <label class="chk"><input type="checkbox" id="${name}_enabled"> In the schedule</label>
+    <label>Frequency, MHz (${lo}–${hi}) <input type="number" step="0.000001" id="${name}_freq"></label>
+    <label>Mode <select id="${name}_mode"><option>morse</option><option>carrier</option></select></label>
+    <label>Carrier length, s <input type="number" id="${name}_carrier_s" min="1" max="60"></label>
+    <button type="button" class="tx" id="${name}_tx">Transmit now</button>`;
+  $("bands").appendChild(d);
+  $(name + "_tx").addEventListener("click", () => transmitNow(name));
+}
+
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : {method: "POST", body: JSON.stringify(body)});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+
+function num(id, label) {
+  const v = $(id).value.trim();
+  if (v === "" || isNaN(+v)) throw new Error(label + " needs a number");
+  return +v;
+}
+
+async function loadConfig() {
+  const c = await api("/api/config");
+  for (const k of ["callsign","locator","wpm","message","gap_s","interval_s","wifi_ssid"]) $(k).value = c[k];
+  $("tx_enabled").checked = c.tx_enabled;
+  for (const n in BANDS) {
+    const b = c.bands[n];
+    $(n + "_enabled").checked = b.enabled;
+    $(n + "_freq").value = (b.freq / 1e6).toFixed(6);
+    $(n + "_mode").value = b.mode;
+    $(n + "_carrier_s").value = b.carrier_s;
+  }
+  dirty = false;
+  render();
+}
+
+function chip(text, cls) { return `<span class="chip ${cls || ""}">${text}</span>`; }
+
+function render() {
+  const s = last;
+  if (!s) return;
+  const air = s.band || s.queued;
+  $("status").innerHTML =
+    chip(s.tx_enabled ? "TRANSMIT ENABLED" : "transmit off", s.tx_enabled ? "on" : "") +
+    chip(s.band ? "ON AIR: " + s.band : (s.queued ? "queued: " + s.queued : "idle"), s.band ? "air" : "") +
+    chip("last tx: " + (s.last_tx_age_s == null ? "–" : s.last_tx_age_s + " s ago")) +
+    chip(`${s.net.mode} ${s.net.ssid} ${s.net.ip}`) +
+    chip("up " + Math.floor(s.uptime_s / 60) + " min") +
+    (s.error ? chip("ERROR: " + s.error, "bad") : "");
+  if (document.activeElement !== $("tx_enabled")) $("tx_enabled").checked = s.tx_enabled;
+  for (const n in BANDS) {
+    $(n + "_air").hidden = s.band !== n;
+    $("band_" + n).className = "band" + (s.band === n ? " air" : "");
+    const b = $(n + "_tx");
+    let why = "";
+    if (!s.tx_enabled) why = "Tick “Transmit enabled” first";
+    else if (air) why = "Another transmission is in progress";
+    else if (dirty) why = "Save station settings first";
+    b.disabled = !!why;
+    b.title = why;
+    b.textContent = s.band === n ? "On air…" : (s.queued === n ? "Starting…" : "Transmit now");
+  }
+  if (dirty) say("station_msg", "Unsaved changes", "warn");
+  else if ($("station_msg").textContent === "Unsaved changes") say("station_msg", "");
+}
+
+async function poll() {
+  try { last = await api("/api/status"); render(); }
+  catch (e) { $("status").innerHTML = chip("no status: " + e.message, "bad"); }
+}
+
+$("station").addEventListener("input", ev => {
+  if (ev.target.id === "tx_enabled") return;
+  dirty = true; render();
+});
+
+$("tx_enabled").addEventListener("change", async () => {
+  const want = $("tx_enabled").checked;
+  try { await api("/api/config", {tx_enabled: want}); say("topmsg", want ? "Transmit enabled" : "Transmit disabled", "ok"); }
+  catch (e) { $("tx_enabled").checked = !want; say("topmsg", e.message, "err"); }
+  poll();
+});
+
+$("save_station").addEventListener("click", async () => {
+  try {
+    const u = {callsign: $("callsign").value.trim(), locator: $("locator").value.trim(),
+      message: $("message").value, wpm: num("wpm", "Morse speed"),
+      gap_s: num("gap_s", "Seconds between bands"), interval_s: num("interval_s", "Seconds between cycles"),
+      bands: {}};
+    for (const n in BANDS) u.bands[n] = {enabled: $(n + "_enabled").checked,
+      freq: Math.round(num(n + "_freq", n + " frequency") * 1e6), mode: $(n + "_mode").value,
+      carrier_s: num(n + "_carrier_s", n + " carrier length")};
+    await api("/api/config", u);
+    dirty = false;
+    say("station_msg", "Saved", "ok");
+    await loadConfig();
+  } catch (e) { say("station_msg", e.message, "err"); }
+  poll();
+});
+
+$("save_network").addEventListener("click", async () => {
+  try {
+    const u = {wifi_ssid: $("wifi_ssid").value.trim()};
+    for (const k of ["wifi_password", "web_password"]) if ($(k).value) u[k] = $(k).value;
+    await api("/api/config", u);
+    $("wifi_password").value = $("web_password").value = "";
+    say("network_msg", "Saved", "ok");
+  } catch (e) { say("network_msg", e.message, "err"); }
+});
+
+async function transmitNow(name) {
+  try { await api("/api/tx", {band: name}); say("topmsg", "Transmitting on " + name, "ok"); }
+  catch (e) { say("topmsg", e.message, "err"); }
+  poll();
+}
+
+$("stop").addEventListener("click", async () => {
+  try { await api("/api/stop", {}); say("topmsg", "Stopped", "ok"); $("tx_enabled").checked = false; }
+  catch (e) { say("topmsg", "STOP FAILED: " + e.message, "err"); }
+  poll();
+});
+
+loadConfig().catch(e => say("topmsg", e.message, "err"));
+poll();
+setInterval(poll, 1500);
+</script>
+</body>
+</html>
