@@ -64,7 +64,7 @@ small{color:#667;display:block;margin-top:6px;font-size:12px}
 <label>Seconds between cycles <input type="number" id="interval_s" min="0"></label>
 </div>
 <div class="bands" id="bands"></div>
-<div class="save"><button type="button" id="save_station">Save station</button><span id="station_msg" class="msg"></span></div>
+<div class="save"><button type="button" id="save_station">Save station</button><span id="station_msg" class="msg"></span><span id="station_dirty" class="msg warn"></span></div>
 </section>
 <section id="network" class="net">
 <h2>Network</h2>
@@ -187,8 +187,7 @@ function render() {
     b.title = why;
     b.textContent = s.band === n ? "On air…" : (s.waiting === n ? "Waiting for slot…" : (s.queued === n ? "Starting…" : "Transmit now"));
   }
-  if (dirty) say("station_msg", "Unsaved changes", "warn");
-  else if ($("station_msg").textContent === "Unsaved changes") say("station_msg", "");
+  $("station_dirty").textContent = dirty ? "Unsaved changes" : "";
 }
 
 async function poll() {
@@ -198,7 +197,9 @@ async function poll() {
 
 $("station").addEventListener("input", ev => {
   if (ev.target.id === "tx_enabled") return;
-  dirty = true; render();
+  dirty = true;
+  say("station_msg", "");  // an old result no longer applies once something is edited
+  render();
 });
 
 $("tx_enabled").addEventListener("change", async () => {

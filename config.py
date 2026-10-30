@@ -90,6 +90,10 @@ def defaults():
     }
 
 
+def _mhz(hz):
+    return "%d.%03d" % (hz // 1000000, hz % 1000000 // 1000)
+
+
 def _is_int(value):
     return isinstance(value, int) and not isinstance(value, bool)
 
@@ -142,8 +146,8 @@ def validate(cfg):
         if band["mode"] not in MODES:
             raise ValueError("%s: mode must be one of %s" % (name, MODES))
         if not _is_int(band["freq"]) or not spec["lo"] <= band["freq"] <= spec["hi"]:
-            raise ValueError("%s: frequency must be %d-%d Hz"
-                             % (name, spec["lo"], spec["hi"]))
+            raise ValueError("%s: frequency must be between %s and %s MHz"
+                             % (name, _mhz(spec["lo"]), _mhz(spec["hi"])))
         for key, lo, hi in (("carrier_s", 1, 60), ("period_ms", 50, 60000),
                             ("duty_pct", 1, 99), ("shift_hz", 10, 5000)):
             if not _is_int(band[key]) or not lo <= band[key] <= hi:
