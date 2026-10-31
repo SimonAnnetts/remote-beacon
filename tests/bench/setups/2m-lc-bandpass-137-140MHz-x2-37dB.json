@@ -1,0 +1,12 @@
+{
+    "id": "2m-lc-bandpass-137-140MHz-x2-37dB",
+    "output": "2m",
+    "description": "CLK1 (2m, the wanted signal is the fundamental) through two identical cheap band-pass filters marked 137M/140M in series, and a measured 37 dB pad set",
+    "chain": [
+        {"kind": "filter", "name": "LC band-pass 137M/140M, first", "part": "cheap import, marked 137M/140M", "notes": "L-C-L-C-L in series with capacitors to ground at each junction; the same one as in the single-filter baseline"},
+        {"kind": "filter", "name": "LC band-pass 137M/140M, second", "part": "cheap import, marked 137M/140M", "notes": "identical to the first, connected directly after it"},
+        {"kind": "attenuator", "name": "pad set", "db": 37.4, "notes": "measured, not the labels: the 27-33-27 ohm T pad (15 dB) in series with the BNC attenuator marked 10 dB (really 27 dB), joined with SMA/BNC adapters. Measured together without a filter on 2026-10-31 as 37.4 dB at 145 MHz (36.9 to 38.4 dB from 20 to 180 MHz)."}
+    ],
+    "analyser": {"type": "tinysa", "port": "/dev/ttyACM1", "attenuation_db": 0, "lna": false},
+    "notes": "Compare with 2m-lc-bandpass-137-140MHz-37dB (one filter). Same pad set, so levels are comparable. The pad value was measured without any filter in front of it."
+}

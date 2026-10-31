@@ -1,0 +1,12 @@
+{
+    "id": "2m-lpf-200MHz-then-bpf-137-140MHz-37dB",
+    "output": "2m",
+    "description": "CLK1 (2m, the wanted signal is the fundamental) through a cheap 200 MHz low-pass, then a cheap band-pass marked 137M/140M, then a measured 37 dB pad set",
+    "chain": [
+        {"kind": "filter", "name": "LC low-pass 200MHz", "part": "cheap import, marked 200MHz", "notes": "three series inductors and four capacitors to ground; connected directly to CLK1"},
+        {"kind": "filter", "name": "LC band-pass 137M/140M", "part": "cheap import, marked 137M/140M", "notes": "L-C-L-C-L in series with capacitors to ground at each junction; connected after the low-pass"},
+        {"kind": "attenuator", "name": "pad set", "db": 37.4, "notes": "measured, not the labels: the 27-33-27 ohm T pad (15 dB) in series with the BNC attenuator marked 10 dB (really 27 dB), joined with SMA/BNC adapters. Measured together without a filter on 2026-10-31 as 37.4 dB at 145 MHz (36.9 to 38.4 dB from 20 to 180 MHz)."}
+    ],
+    "analyser": {"type": "tinysa", "port": "/dev/ttyACM1", "attenuation_db": 0, "lna": false},
+    "notes": "Compare with 2m-lc-bandpass-137-140MHz-37dB (band-pass only) and 2m-lpf-200MHz-37dB (low-pass only). Same pad set, so levels are comparable. The low-pass is first, next to the Si5351."
+}

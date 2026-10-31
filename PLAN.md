@@ -62,7 +62,7 @@ reject the fundamental wherever it lands.
   rating. Amplifier harmonics are not removed by the filters that precede it, so a low-pass
   filter after the amp may still be needed depending on the measured result.
 - **Crosstalk between outputs.** Measured on the bench with CLK0/1/2 all running (2 mA drive,
-  10 dB pad): CLK1's third harmonic (3 x 144.5 = 433.5 MHz) appears on the CLK2 SMA at about
+  "10 dB" pad, really about 26 dB): CLK1's third harmonic (3 x 144.5 = 433.5 MHz) appears on the CLK2 SMA at about
   -70 dBm, ~36 dB below the wanted 435 MHz signal (-33.9 dBm). It disappears when CLK1 is
   disabled. The third harmonic of any 2m frequency (432–438 MHz) lies inside the 70cm band, so
   neither the 2m filter nor the SAW filter can remove it. Mitigation: never transmit two bands
@@ -74,7 +74,7 @@ reject the fundamental wherever it lands.
   band's amplifier is powered.
   Confirmed on the bench: with only CLK1 enabled, the 145 MHz leak disappears and the spurs
   around the carrier (seen at 144.1/144.3/144.6/144.8 MHz, -59 to -64 dBm with all three
-  outputs running) fall to -70 dBm or lower (>=42 dB below the -27.5 dBm carrier, 10 dB pad).
+  outputs running) fall to -70 dBm or lower (>=42 dB below the -27.5 dBm carrier, "10 dB" pad).
 - **PLL allocation.** A MultiSynth can only divide fractionally when the divider is 8 or
   more, so with a 600–900 MHz VCO anything above 112.5 MHz must use an integer divider (6 for
   112.5–150 MHz) and be tuned by moving its PLL. 2m (CLK1) and the 70cm carrier (CLK2) therefore
@@ -139,7 +139,7 @@ Implemented (mode names as in the web UI):
    shift (10 Hz to 5 kHz) above. A retune takes 1.5–3.8 ms.
 5. **AM carrier (two levels)** and **Morse ID (AM tone)** – crude amplitude modulation by
    switching the output drive between two of 2/4/6/8 mA at 20–500 Hz. The drive write takes
-   ~0.34 ms, so each half cycle must be at least 600 µs. Measured at 50 MHz (10 dB pad):
+   ~0.34 ms, so each half cycle must be at least 600 µs. Measured at 50 MHz ("10 dB" pad, really about 27 dB):
    -22 / -17 / -14 / -12 dBm for 2 / 4 / 6 / 8 mA, so 2 mA with 8 mA gives ~52% depth and the
    steps shrink at higher drive. Verified on 6m with 2/8 mA at 400 Hz: sidebands ~10 dB
    below the carrier, as predicted for ~52% depth. Depth on 2m and 70cm still to be measured.
@@ -198,7 +198,15 @@ frequency reference for calibrating the Si5351's crystal error.
 
 ## Bench results (Si5351 only, no filters or amplifiers)
 
-TinySA Ultra, 10 dB attenuator + DC block in line (add 10 dB for levels at the chip), all
+> **Correction (2026-10-31, later).** The attenuator described below and elsewhere in this section as "10 dB" was
+> measured later and **loses 27 dB** (flat from 20 to 180 MHz; 25.8 dB at 435 MHz). Every **absolute** level in this
+> section that was converted "to the chip" by adding 10 dB is therefore about 16 dB too low: the Si5351 at 2 mA gives
+> about **+3 dBm** (measured directly into the analyser), not about -12 dBm. The raw TinySA readings and all **relative**
+> figures (dB, dBc, crosstalk ratios, which spur is which) are unaffected, because they come from readings taken through
+> the same pad. The early unfiltered 6m readings (-22 dBm at 2 mA, -12 dBm at 8 mA) fit a 27 dB pad. See
+> docs/6m-output-characterisation.md (how the pads were measured) and docs/70cm-output-characterisation.md.
+
+TinySA Ultra, an attenuator marked 10 dB (really about 27 dB) + DC block in line (add about 27 dB, not 10, for levels at the chip), all
 outputs at the default 2 mA drive, crystal correction 151.3 ppm applied. One output enabled at
 a time unless stated.
 
@@ -213,7 +221,7 @@ a time unless stated.
 
 6m with a 9-pole Chebyshev low-pass filter (64 MHz cutoff) fitted: no harmonics visible above
 -70 dBm from the carrier to 510 MHz (before the filter: 2nd/3rd/5th at -45/-34/-35 dBm), so the
-3rd harmonic is now at least 36 dB lower. Carrier through the filter (10 dB pad): -27 dBm at 2 mA
+3rd harmonic is now at least 36 dB lower. Carrier through the filter ("10 dB" pad, really about 27 dB): -27 dBm at 2 mA
 and -15.7 dBm at 8 mA, i.e. ~5 dB and ~3.7 dB filter loss against -22/-12 dBm unfiltered; the
 difference may be the source impedance changing with drive. 2 mA versus 8 mA is now 11.3 dB
 apart (~57% AM depth). The analyser's noise floor appeared to rise from -90 to -70 dBm while
@@ -226,7 +234,7 @@ Remaining spurs on 6m after the filter (carrier 51 MHz, fixed attenuation): at 2
 458.8 MHz (-77, the 9th harmonic). The 36.4 and 66.5 MHz spurs are not harmonics of 51 MHz. They
 could be Si5351 VCO products (with only 6m running the VCO is at 800 MHz, and 800/22 and 800/12
 are 36.4 and 66.7 MHz), but that may be coincidence.
-These readings are NOT yet trustworthy. With the 10 dB pad removed (carrier -5 dBm) the 102 MHz
+These readings are NOT yet trustworthy. With the "10 dB" pad removed (carrier -5 dBm) the 102 MHz
 spur rose 45 dB for a 9 dB rise in the carrier, so the TinySA front end overloads above roughly
 -25 dBm, and its stepped sweep gives inconsistent levels when the span changes. To repeat on the
 analogue analyser with its input kept low: check each spur with a 10 dB attenuator step (a real
@@ -235,7 +243,7 @@ each spur shifts (2nd harmonic by 1 MHz, 9th by 4.5 MHz, a fixed clock not at al
 
 (SUPERSEDED, kept for history: the wide-span spur readings in this paragraph, such as -32 dBc at +/-2 MHz, were artefacts of the
 stepped sweep, and the out-of-band list missed the 725 MHz 5th harmonic. See docs/70cm-output-characterisation.md.)
-70cm with the SAW filter fitted (carrier 145 MHz, so 435 MHz wanted; 10 dB pad; stepped TinySA, so
+70cm with the SAW filter fitted (carrier 145 MHz, so 435 MHz wanted; "10 dB" pad, really 25.8 dB; stepped TinySA, so
 frequencies are only good to a few hundred kHz): at 2 mA the wanted signal is -34.7 dBm, the
 145 MHz fundamental is -84 dBm (-49 dBc) and a spur at 580 MHz (4th harmonic) is -80 dBm (-45 dBc).
 At 8 mA the wanted signal is -30 dBm, the fundamental -76 dBm (-46 dBc) and 579 MHz -83 dBm
@@ -255,8 +263,23 @@ fractional-N PLL spurs near the integer-ratio frequency 437.566 MHz; and the str
 A full characterisation of the 70cm output with the SAW filter, including the SAW's response, spurs against
 carrier frequency, out-of-band emissions and a PGA-103+ baseline, is in docs/70cm-output-characterisation.md.
 
+The 6m output with the 64 MHz low-pass filter has the same treatment in docs/6m-output-characterisation.md. Its main
+findings: 50.000 MHz is spur-free (-60 dBc) because it is an integer ratio of the 25 MHz crystal, and elsewhere in the band
+the fractional-N spurs sit at whole multiples of the distance from 50.000 MHz, at -47 to -52 dBc (2 mA) and -33 to -45 dBc
+(8 mA). The wide scan now finds spurs at 35.0 and 67.0 MHz, 16 MHz either side of a 51 MHz carrier, part of that same family; they are
+probably the 36.4/66.5 MHz spurs noted above, which came from the unreliable stepped sweep (the 459 MHz one is the 9th harmonic). The measurements also showed that the BNC attenuator marked
+10 dB loses 27 dB.
+
+The 2m output with the cheap LC band-pass (marked 137M/140M) is in docs/2m-output-characterisation.md. That filter turned out
+to be about 42 MHz wide (-3 dB at 112 to 154 MHz), so it barely filters: close-in spurs are -36 to -45 dBc at 8 mA, with real
+spurs 5 MHz either side of the carrier (-44 dBc at 8 mA), and the 725 MHz 5th harmonic is -37 dBc (2 mA) / -42 dBc (8 mA).
+144.3 to 144.6 MHz is the clean part of the band; there is no spur-free frequency. Trying a cheap 200 MHz low-pass, alone and
+in series with the band-pass, showed that the low-pass filters almost nothing below 200 MHz (2nd harmonic -27 dBc) but improves
+the close-in spurs, and that two unshielded filters touching each other couple around each other (725 MHz harmonic -34 dBc,
+against -50 dBc with 15 cm of coax between them). The 725 MHz pickup floor is about -55 dBc at 8 mA until the board is shielded.
+
 Controlled re-measurement of 70cm over USB (tinysa.py helper in the scratchpad: fixed 30 kHz RBW,
-25 kHz steps, 8 sweeps averaged, 8 mA, SAW fitted, 10 dB pad; repeatable to about 0.5 dB):
+25 kHz steps, 8 sweeps averaged, 8 mA, SAW fitted, "10 dB" pad (really 25.8 dB); repeatable to about 0.5 dB):
 carrier 435.000 MHz at -29.7 dBm. The +/-0.1 MHz "spurs" are the analyser's own RBW skirt (their dBc
 falls from -48 to -71 as RBW goes 30 -> 3 kHz), so nothing real is seen within +/-0.2 MHz down to
 -71 dBc. Real spurs at about +/-0.65 MHz and +/-1.3 to 2 MHz are -53 to -58 dBc. PLLA versus PLLB:
