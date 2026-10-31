@@ -1,5 +1,15 @@
 # 70cm output characterisation (CLK2, 3rd harmonic, with SAW filter)
 
+> **Second correction (pad value).** This document assumed the attenuator in front of the analyser was exactly 10 dB.
+> **It is not: it loses 25.8 dB at 435 MHz** (25.0 to 26.2 dB at 420-450 MHz), measured later the same day by comparing
+> CLK2 through a straight cable with CLK2 through the attenuator. (The same part loses 27 dB at 20-180 MHz; see the 6m
+> document.) So every **absolute level "leaving the SAW"** below was 15.8 dB too low, and the **PGA-103+ prediction in
+> section 5 changes materially**: the amplifier would be driven to +13 to +18 dBm, not -3 to +3 dBm, much closer to its
+> P1dB. Everything in dBc, the SAW shape, the spur offsets and the out-of-band signals is unchanged, because those are
+> ratios of readings taken through the same pad. Levels "at the TinySA" are the raw readings and are unchanged. The
+> converted figures carry an uncertainty of about 3 dB, because the pad was measured without the SAW in front of it and the
+> two do not match perfectly.
+
 > **Correction (later the same day).** The first version of this document said that, apart from the 145 MHz carrier and
 > the 580 MHz 4th harmonic, nothing out of band was visible above the floor. **That was wrong.** The first campaign's
 > peak finder never looked at the first and last point of each scan window, and the 5th harmonic of the carrier, at
@@ -20,10 +30,10 @@ run's data has been imported into `tests-results/` so it can be compared with la
 | SAW passband (-3 dB) | **420.9 to 444.1 MHz** (23.2 MHz wide, centred on 432.5 MHz) |
 | Passband flatness | about 1.6 dB p-p (-29.7 to -28.1 dBm) over 421-443 MHz; the whole 430-440 MHz band is inside it |
 | SAW rejection | 42 to 50 dB below 415 MHz; 25 dB at 450 MHz; 36 dB at 455 MHz; 45 to 47 dB above 470 MHz |
-| Wanted level leaving the SAW | -24.7 dBm (2 mA) to -19.2 dBm (8 mA) at 435 MHz |
+| Wanted level leaving the SAW | about **-8.9 dBm (2 mA) to -3.4 dBm (8 mA)** at 435 MHz (about +/-3 dB; the first version said -24.7 to -19.2 dBm, using a 10 dB pad) |
 | Strongest out-of-band signals, 5-800 MHz | **725 MHz (5th harmonic of the carrier) at -33 dBc (2 mA) / -36 dBc (8 mA)**; 145 MHz carrier at -47 to -52 dBc; 580 MHz (4th harmonic) at -53 to -54 dBc. Everything else is below the analyser's floor (about -54 dBc or lower) |
 | Close-in spurs (within 5 MHz) | **depend strongly on the carrier frequency**: across 430-440 MHz the strongest spur ranges from **-57 dBc (best, 431.25 MHz) to -35 dBc (worst, 436.75 MHz)**; see the spur map below |
-| Through a PGA-103+ (datasheet gain) | about -3 to +2.6 dBm out; far below its +21.5 dBm P1dB |
+| Through a PGA-103+ (datasheet gain) | about **+13 to +18 dBm** out (20-69 mW); the 8 mA case is within about 3 dB of its +21.5 dBm P1dB |
 
 The close-in spurs are the main concern: the SAW is wide, so it cannot remove them, and their level changes by
 over 20 dB across the band. The spur map (section 2) shows where they are and why.
@@ -32,14 +42,14 @@ over 20 dB across the band. The spur map (section 2) shows where they are and wh
 
 ```
 Pico W --I2C-- Si5351 (Adafruit, 25 MHz crystal, +151.3 ppm correction applied)
-                 CLK2 --> SAW filter (part number unknown) --> 10 dB attenuator --> TinySA Ultra, low input
+                 CLK2 --> SAW filter (part number unknown) --> attenuator (marked 10 dB, really 25.8 dB at 435 MHz) --> TinySA Ultra, low input
 ```
 
 * CLK2 is on PLLB, MultiSynth divide 6. The carrier is 1/3 of the wanted frequency (about 145 MHz for 435 MHz); the
   wanted signal is its 3rd harmonic. Only CLK2 was enabled.
 * TinySA Ultra `tinySA4_v1.4-200` (HW V0.4.6), controlled over USB. Attenuation fixed at 0 dB, LNA off.
-* All levels below are **at the TinySA input, after the 10 dB attenuator**. Add 10 dB for the level leaving the
-  SAW (assumes the attenuator is exactly 10 dB and ignores cable loss; about +/-1 dB).
+* All levels below are **at the TinySA input, after the attenuator**. Add **25.8 dB** for the level leaving the SAW
+  (the attenuator's measured loss at 435 MHz; about +/-3 dB because the SAW and the pad are not perfectly matched).
 * Drive: 8 mA for the SAW sweeps; 2, 4, 6 and 8 mA where stated.
 
 ## Method
@@ -227,12 +237,12 @@ frequencies 340-474 MHz). At 8 mA, as read at the analyser:
 
 ## 4. Level against drive (435 MHz)
 
-| Drive | Wanted at TinySA | Wanted leaving the SAW | 145 MHz fundamental at TinySA | 145 MHz relative to wanted |
+| Drive | Wanted at TinySA | Wanted leaving the SAW (+25.8 dB) | 145 MHz fundamental at TinySA | 145 MHz relative to wanted |
 |---|---|---|---|---|
-| 2 mA | -34.7 dBm | -24.7 dBm | -86.5 dBm | -52 dBc |
-| 4 mA | -32.2 dBm | -22.2 dBm | -81.0 dBm | -49 dBc |
-| 6 mA | -32.7 dBm | -22.7 dBm | -78.5 dBm | -46 dBc |
-| 8 mA | -29.2 dBm | -19.2 dBm | -77.0 dBm | -48 dBc |
+| 2 mA | -34.7 dBm | -8.9 dBm | -86.5 dBm | -52 dBc |
+| 4 mA | -32.2 dBm | -6.4 dBm | -81.0 dBm | -49 dBc |
+| 6 mA | -32.7 dBm | -6.9 dBm | -78.5 dBm | -46 dBc |
+| 8 mA | -29.2 dBm | -3.4 dBm | -77.0 dBm | -48 dBc |
 
 The wanted 3rd harmonic is **not monotonic** with drive (6 mA is lower than 4 mA), unlike the fundamental on 6m. Between
 repeats at the same setting the carrier moved by about 0.5 dB (8 mA: -29.2, -29.8, -29.9 dBm).
@@ -249,20 +259,22 @@ Other datasheet figures at 400 MHz: P1dB +21.5 dBm, OIP3 +39 dBm, noise figure 0
 maximum input +21 dBm CW. Gain is specified at -25 dBm input. Supply 5.0 V (4.8-5.2 V), 97 mA typical, with an input
 DC block and an RF-choke bias tee on the output (datasheet Fig. 2a/2b).
 
-Predicted at the amplifier output, assuming the amplifier is linear (it is, by a wide margin: the input is 40 dB below its
-maximum):
+Predicted at the amplifier output, assuming the amplifier is linear. This is **less safe than the first version said**: the
+8 mA output is within about 3 dB of the P1dB, so expect a little compression and extra harmonics from the amplifier itself
+(the input, -3 dBm, is still 24 dB below its +21 dBm maximum):
 
 | Drive | Into the PGA | Out at 435 MHz | 145 MHz spur | 580 MHz spur | **725 MHz spur** | Worst close-in spur at 435 MHz |
 |---|---|---|---|---|---|---|
-| 2 mA | -24.7 dBm | **-2.9 dBm** | -48 dBc | -55 dBc | **-36 dBc** | -53 dBc |
-| 8 mA | -19.2 dBm | **+2.6 dBm** | -44 dBc | -56 dBc | **-39 dBc** | -52 dBc |
+| 2 mA | -8.9 dBm | **+12.9 dBm** | -48 dBc | -55 dBc | **-36 dBc** | -53 dBc |
+| 8 mA | -3.4 dBm | **+18.4 dBm** | -44 dBc | -56 dBc | **-39 dBc** | -52 dBc |
 
 * The fundamental gets **worse** by 3.5 dB relative to the wanted signal because the amplifier has more gain at 145 MHz;
   the 4th and 5th harmonics get 1.5 and 2.9 dB better. The close-in spurs are unchanged.
-* At 8 mA the 725 MHz signal would be about -37 dBm at the amplifier output, 40 dB below the wanted signal: that is the
+* At 8 mA the 725 MHz signal would be about -22 dBm at the amplifier output, 40 dB below the wanted signal: that is the
   strongest unwanted signal outside the band, and it needs filtering.
-* The output is only about 0.5 to 1.8 mW. To reach, say, +20 dBm you would need about 17 dB more gain and a harmonic filter
-  after it. The amplifier's own harmonic output is not specified in the datasheet and should be measured.
+* The output would be about 20 mW (2 mA) to 69 mW (8 mA). At 8 mA that is only about 3 dB below the amplifier's P1dB, so
+  it is probably better to run at 4 or 6 mA, or to put a few dB of pad in front of the amplifier. The amplifier's own
+  harmonic output is not specified in the datasheet and should be measured.
 * The PGA-103+ is a wideband amplifier: it will amplify the 145 MHz leak, the 580 MHz harmonic and the close-in spurs along
   with the wanted signal. Any extra filtering is best placed *before* it for the 145 MHz leak and *after* it for harmonics.
 
@@ -286,7 +298,7 @@ maximum):
   campaign's out-of-band list had the window-edge blind spot described at the top.
 * The baseline for this setup is run `2026-10-31T02-51-44__70cm-saw-unknown-10dB` (all five tests, procedure versions in the
   file); the earlier run `02-28-15` used wide-spectrum v1 and response v1 (no 5th order, no out-of-band checks).
-* TinySA readings are not calibrated; absolute levels are +/-2 dB or worse. The pad is assumed to be exactly 10 dB.
+* TinySA readings are not calibrated; absolute levels are +/-2 dB or worse. The pad was assumed to be 10 dB in the first version of this document; it was measured at 25.8 dB at 435 MHz afterwards (see the correction at the top). The raw run files still record a 10 dB pad until they are patched.
 * The TinySA's low input stops at 800 MHz.
 * The SAW's insertion loss and the unfiltered baseline were not measured in this run.
 * The amplifier figures are calculated from the datasheet, not measured.
