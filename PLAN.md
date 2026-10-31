@@ -233,6 +233,31 @@ analogue analyser with its input kept low: check each spur with a 10 dB attenuat
 spur moves 10 dB, an analyser-made one 20 dB or more), and move the carrier by 0.5 MHz to see how
 each spur shifts (2nd harmonic by 1 MHz, 9th by 4.5 MHz, a fixed clock not at all).
 
+70cm with the SAW filter fitted (carrier 145 MHz, so 435 MHz wanted; 10 dB pad; stepped TinySA, so
+frequencies are only good to a few hundred kHz): at 2 mA the wanted signal is -34.7 dBm, the
+145 MHz fundamental is -84 dBm (-49 dBc) and a spur at 580 MHz (4th harmonic) is -80 dBm (-45 dBc).
+At 8 mA the wanted signal is -30 dBm, the fundamental -76 dBm (-46 dBc) and 579 MHz -83 dBm
+(-53 dBc), with spurs at 433 and 437 MHz of -62 dBm (-32 dBc). So the SAW rejects the fundamental
+by about 55 dB, but (a) the fundamental is still in the 2m band at about -46 to -49 dBc, (b) the
+4th harmonic at 580 MHz needs a low-pass filter around 450-500 MHz, and (c) the +/-2 MHz spurs
+are inside the SAW passband and must be fixed at the source. Ideas: put 70cm on PLLA instead of
+PLLB to see whether the spurs follow the PLL, shift the carrier to see if they keep a fixed
+offset, and try the only integer-ratio frequency (437.566 MHz) to see if they are fractional-N
+products. The 435.2 MHz carrier reading is probably stepped-sweep error; confirm with a narrow span.
+
+A full characterisation of the 70cm output with the SAW filter, including the SAW's response, spurs against
+carrier frequency, out-of-band emissions and a PGA-103+ baseline, is in docs/70cm-output-characterisation.md.
+
+Controlled re-measurement of 70cm over USB (tinysa.py helper in the scratchpad: fixed 30 kHz RBW,
+25 kHz steps, 8 sweeps averaged, 8 mA, SAW fitted, 10 dB pad; repeatable to about 0.5 dB):
+carrier 435.000 MHz at -29.7 dBm. The +/-0.1 MHz "spurs" are the analyser's own RBW skirt (their dBc
+falls from -48 to -71 as RBW goes 30 -> 3 kHz), so nothing real is seen within +/-0.2 MHz down to
+-71 dBc. Real spurs at about +/-0.65 MHz and +/-1.3 to 2 MHz are -53 to -58 dBc. PLLA versus PLLB:
+PLLA is only 3-4 dB better at +/-0.65 MHz and the same elsewhere, so there is no reason to move 70cm
+to PLLA. The earlier wide-span readings of -32 dBc spurs at +/-2 MHz and the 434.6/435.3 MHz spurs
+were measurement artefacts of the stepped sweep; the wide-span 6m spur readings (36.4/66.5/458.8
+MHz) should be re-checked the same way. The paragraph below is therefore superseded.
+
 The 434.6/435.3 MHz spurs fall inside the SAW passband (133 kHz below and 100 kHz above the
 145 MHz fundamental before tripling) and are probably PLLB fractional-N spurs (VCO/xtal =
 34.8). Possible mitigation: choose the fractional denominator to move them.
