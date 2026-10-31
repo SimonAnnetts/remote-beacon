@@ -11,5 +11,21 @@
     ],
     "python.analysis.extraPaths": [
         "~/.micropico-stubs/included"
+    ],
+    "micropico.pyIgnore": [
+        "**/.picowgo",
+        "**/.micropico",
+        "**/.vscode",
+        "**/.gitignore",
+        "**/.git",
+        "**/.DS_Store",
+        "**/project.pico-go",
+        "**/env",
+        "**/venv",
+        "**/.venv",
+        "**/.idea",
+        "**/tests",
+        "**/tests-results",
+        "**/docs"
     ]
 }

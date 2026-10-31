@@ -1,8 +1,17 @@
 # 70cm output characterisation (CLK2, 3rd harmonic, with SAW filter)
 
+> **Correction (later the same day).** The first version of this document said that, apart from the 145 MHz carrier and
+> the 580 MHz 4th harmonic, nothing out of band was visible above the floor. **That was wrong.** The first campaign's
+> peak finder never looked at the first and last point of each scan window, and the 5th harmonic of the carrier, at
+> **725.0 MHz**, falls exactly on a window's first point. The bench framework joins its windows into one trace and found
+> it: it is at -33 to -37 dBc, the **strongest out-of-band emission through the SAW**. It is a real signal (see section 3).
+> The affected figures below have been corrected.
+
 Measured 2026-10-31 (01:35-01:48), firmware at commit `7859547`.
 Raw data: [`data/70cm-saw-2026-10-31.json`](data/70cm-saw-2026-10-31.json).
-First-version measurement scripts: [`../tools/bench/`](../tools/bench/) (`campaign_70cm_v0.py`, `tinysa.py`, `pico.py`).
+This was a one-off, hand-run campaign (script: [`../tests/bench/campaign_70cm_v0.py`](../tests/bench/campaign_70cm_v0.py)).
+The measurements are now repeatable with the bench framework in [`../tests/bench/`](../tests/bench/README.md), and this
+run's data has been imported into `tests-results/` so it can be compared with later runs in the bench web UI.
 
 ## Summary
 
@@ -12,12 +21,12 @@ First-version measurement scripts: [`../tools/bench/`](../tools/bench/) (`campai
 | Passband flatness | about 1.6 dB p-p (-29.7 to -28.1 dBm) over 421-443 MHz; the whole 430-440 MHz band is inside it |
 | SAW rejection | 42 to 50 dB below 415 MHz; 25 dB at 450 MHz; 36 dB at 455 MHz; 45 to 47 dB above 470 MHz |
 | Wanted level leaving the SAW | -24.7 dBm (2 mA) to -19.2 dBm (8 mA) at 435 MHz |
-| Strongest out-of-band signals, 5-800 MHz | 145 MHz fundamental at -45 to -52 dBc; 580 MHz (4th harmonic) at about -53 dBc. Everything else is below about -54 dBc (analyser floor limited) |
-| Close-in spurs (within 5 MHz) | **depend strongly on the carrier frequency**: -52 to -53 dBc at 435 MHz, -47 to -49 dBc at 432.45 MHz, **-38 dBc at 438 MHz** |
+| Strongest out-of-band signals, 5-800 MHz | **725 MHz (5th harmonic of the carrier) at -33 dBc (2 mA) / -36 dBc (8 mA)**; 145 MHz carrier at -47 to -52 dBc; 580 MHz (4th harmonic) at -53 to -54 dBc. Everything else is below the analyser's floor (about -54 dBc or lower) |
+| Close-in spurs (within 5 MHz) | **depend strongly on the carrier frequency**: across 430-440 MHz the strongest spur ranges from **-57 dBc (best, 431.25 MHz) to -35 dBc (worst, 436.75 MHz)**; see the spur map below |
 | Through a PGA-103+ (datasheet gain) | about -3 to +2.6 dBm out; far below its +21.5 dBm P1dB |
 
 The close-in spurs are the main concern: the SAW is wide, so it cannot remove them, and their level changes by
-15 dB across the band.
+over 20 dB across the band. The spur map (section 2) shows where they are and why.
 
 ## Setup
 
@@ -116,18 +125,92 @@ Strongest spurs within +/-5 MHz (offset from the wanted signal in MHz, level in 
 * PLLA against PLLB made only a 3-4 dB difference at 435 MHz in an earlier test. See PLAN.md.
 * The beacon's default 70cm frequency (432.45 MHz) has spurs of about -47 to -49 dBc.
 
+### Spur map
+
+The bench framework (`tests/bench`, run `2026-10-31T02-28-15__70cm-saw-unknown-10dB`) measured the whole +/-5 MHz spectrum at
+every 0.25 MHz from 430 to 440 MHz, at 2 mA and 8 mA (3 sweeps averaged, RBW 30 kHz, 25 kHz steps). The strongest spur at
+each frequency:
+
+![Spur map](img/70cm-spur-map.svg)
+
+| | 2 mA | 8 mA |
+|---|---|---|
+| Worst across the band | -34.7 dBc at 436.75 MHz | -36.0 dBc at 436.75 MHz |
+| Median | -49.4 dBc | -45.8 dBc |
+| Best | -56.9 dBc at 431.25 MHz | -55.3 dBc at 431.25 MHz |
+| Frequencies with the strongest spur at or below -50 dBc | 19 of 41 | 6 of 41 |
+
+* **Two regions are bad.** From about 436 to 438.5 MHz the strongest spur is -35 to -43 dBc, and there is a smaller peak near
+  434.25 MHz (-41 to -44 dBc). The cleanest region is 430.75 to 432 MHz and around 435.0 MHz.
+* **Lower drive is cleaner** (relative to the wanted signal) over most of the band: typically 4 to 9 dB better at 2 mA than at
+  8 mA between 430 and 433 MHz and above 439 MHz. In the worst region (436 to 438.5 MHz) the two are within about 1 dB, and
+  8 mA is very slightly better at 436.75 MHz. In absolute terms the spurs are lower at 2 mA by more than the 5 dB difference in
+  the wanted level (for example at 432.5 MHz: -88 dBm at 2 mA against -76 dBm at 8 mA, at the analyser).
+* **The beacon's default 432.45 MHz** is at -53 dBc (2 mA) but -46 to -47 dBc (8 mA).
+
+**Why: fractional-N spurs.** The carrier at 145 MHz comes from a PLL running at 6 x the carrier (870 MHz). Its multiplier is
+the crystal's 25.004 MHz multiplied by 34.8, a fractional number, and a fractional divider generates spurs. The pattern is
+predictable: with the VCO at exactly 35 x the crystal (an integer ratio) there should be no fractional-N spurs, and that
+happens at a wanted frequency of 437.566 MHz. Near that frequency the strongest spur is at **exactly twice the distance from it**:
+
+| Wanted, MHz | Distance from 437.566 | Predicted spur offset (2 x distance) | Measured strongest spur |
+|---|---|---|---|
+| 436.75 | 0.82 | 1.63 | +/-1.625 MHz at -36 dBc |
+| 437.00 | 0.57 | 1.13 | +/-1.125 MHz at -36 dBc |
+| 437.25 | 0.32 | 0.63 | +/-0.625 MHz at -38 dBc |
+| 437.75 | 0.18 | 0.37 | +/-0.375 MHz at -40 dBc |
+| 438.00 | 0.43 | 0.87 | +/-0.875 MHz at -38 dBc |
+| 438.25 | 0.68 | 1.37 | +/-1.375 MHz at -36 dBc |
+| 438.50 | 0.93 | 1.87 | +/-1.875 MHz at -39 dBc |
+
+At 437.50 MHz, 0.07 MHz from the integer ratio, the strong spurs disappear (-49 dBc), as the model says they should. A weaker
+spur at +/-4.2 MHz (-50 dBc) is present at every frequency and moves slowly with the carrier; it is probably a different
+mechanism. The raised spurs near 436 and 434.25 MHz are probably the same effect at other simple fractions of the multiplier (the fraction is
+about 7/8 near 436 MHz), but that has not been checked.
+
+**What can be done about it:**
+1. Choose the beacon frequency with the map: 431.25 MHz (-55 to -57 dBc) is the cleanest; 435.0 MHz is good (-52 dBc).
+   Anywhere between 436 and 438.5 MHz is poor.
+2. Prefer a lower drive, and recover the power in the amplifier.
+3. The default 432.45 MHz segment frequency is acceptable at 2 mA and is the first thing to re-check at 8 mA.
+4. A frequency near an integer PLL ratio (437.50 MHz here) is a good choice where it is allowed: the nearby strong spurs vanish.
+   The same idea applies to every band: the cleanest frequencies are those whose VCO is close to a whole multiple of the crystal.
+5. The ppm correction moves the integer-ratio frequency (the crystal is 151 ppm fast), so the clean frequency must be
+   recomputed if the crystal's calibration changes.
+
 ## 3. Out-of-band emissions (5-800 MHz)
 
-Only two signals other than the wanted one and its close-in family rise more than 12 dB above the floor:
+Three signals, other than the wanted one and its close-in family, rise more than 12 dB above the floor:
 
 | Signal | 2 mA | 8 mA |
 |---|---|---|
-| 145.0 MHz (carrier fundamental, inside the 2m band) | -50 dBc | -46 dBc |
+| **725.0 MHz (5x carrier)** | **-33 dBc** (-67.4 dBm at the analyser) | **-36 dBc** (-66.4 dBm) |
+| 145.0 MHz (carrier fundamental, inside the 2m band) | -51 dBc | -47 dBc |
 | 580.0 MHz (4x carrier) | -53 dBc | -54 dBc |
 
-Everything else from 5 to 800 MHz is below about -90 dBm, i.e. at least 54 dB below the wanted signal. The 2nd harmonic
-of the carrier (290 MHz) and the 5th (725 MHz) are not visible. The TinySA's low input stops at 800 MHz, so the 870 MHz
-signal (2 x 435 MHz, the VCO frequency) and everything above is **not covered**.
+Everything else from 5 to 800 MHz is below about -90 dBm, i.e. at least 54 dB below the wanted signal. The 2nd harmonic of the
+carrier (290 MHz) is not visible. The TinySA's low input stops at 800 MHz, so the 870 MHz signal (2 x 435 MHz, the VCO
+frequency) and everything above is **not covered**.
+
+**The 725 MHz signal is real, not an analyser artefact.** With the Si5351 output off there is nothing at 725 MHz (only noise at
+-95 to -108 dBm). The TinySA corrects its readings back to its input, so a real signal reads the same whatever attenuation
+the analyser itself adds, while a spur the analyser creates from the strong wanted signal falls as that attenuation is
+raised. At 8 mA with 0, 10 and 20 dB of analyser attenuation the readings were:
+
+| Analyser attenuation | 145 MHz | 435 MHz (wanted) | 580 MHz | 725 MHz |
+|---|---|---|---|---|
+| 0 dB | -77.5 | -29.2 | -83.9 | **-66.0** |
+| 10 dB | -77.0 | -29.2 | -85.9 | **-66.0** |
+| 20 dB | -77.5 | -29.7 | -83.9 | **-66.0** |
+
+Every signal, 725 MHz included, stays where it is. (The wide-spectrum test now repeats this check automatically for the
+strongest out-of-band signals it finds, and marks each one "real signal" or "made by the analyser".)
+
+**Why it is so strong:** the carrier is a square wave, whose 5th harmonic is only 4.4 dB below the 3rd (the wanted signal).
+This SAW filter evidently rejects 725 MHz by only about 30 dB (a rough estimate that assumes an ideal square wave), against
+45-47 dB at 470-500 MHz where it was measured: SAW filters often have poor rejection at particular frequencies above their
+passband. The SAW sweep (section 1) stopped at 500 MHz and never looked there; the response test now also reads the 5th
+order, which traces the filter's rejection across 717-783 MHz.
 
 ## 4. Level against drive (435 MHz)
 
@@ -145,9 +228,9 @@ repeats at the same setting the carrier moved by about 0.5 dB (8 mA: -29.2, -29.
 
 PGA-103+ datasheet (Mini-Circuits, Rev C, 5 V supply), gain interpolated between the tabulated points:
 
-| | 145 MHz | 435 MHz | 580 MHz |
-|---|---|---|---|
-| Gain, dB (interpolated) | 25.3 | 21.8 | 20.3 |
+| | 145 MHz | 435 MHz | 580 MHz | 725 MHz |
+|---|---|---|---|---|
+| Gain, dB (interpolated) | 25.3 | 21.8 | 20.3 | 18.9 |
 
 Other datasheet figures at 400 MHz: P1dB +21.5 dBm, OIP3 +39 dBm, noise figure 0.5 dB, input return loss 11.3 dB. Absolute
 maximum input +21 dBm CW. Gain is specified at -25 dBm input. Supply 5.0 V (4.8-5.2 V), 97 mA typical, with an input
@@ -156,13 +239,15 @@ DC block and an RF-choke bias tee on the output (datasheet Fig. 2a/2b).
 Predicted at the amplifier output, assuming the amplifier is linear (it is, by a wide margin: the input is 40 dB below its
 maximum):
 
-| Drive | Into the PGA | Out at 435 MHz | 145 MHz spur | 580 MHz spur | Worst close-in spur at 435 MHz |
-|---|---|---|---|---|---|
-| 2 mA | -24.7 dBm | **-2.9 dBm** | -48 dBc | -55 dBc | -53 dBc |
-| 8 mA | -19.2 dBm | **+2.6 dBm** | -44 dBc | -56 dBc | -52 dBc |
+| Drive | Into the PGA | Out at 435 MHz | 145 MHz spur | 580 MHz spur | **725 MHz spur** | Worst close-in spur at 435 MHz |
+|---|---|---|---|---|---|---|
+| 2 mA | -24.7 dBm | **-2.9 dBm** | -48 dBc | -55 dBc | **-36 dBc** | -53 dBc |
+| 8 mA | -19.2 dBm | **+2.6 dBm** | -44 dBc | -56 dBc | **-39 dBc** | -52 dBc |
 
 * The fundamental gets **worse** by 3.5 dB relative to the wanted signal because the amplifier has more gain at 145 MHz;
-  the 4th harmonic gets 1.5 dB better. The close-in spurs are unchanged.
+  the 4th and 5th harmonics get 1.5 and 2.9 dB better. The close-in spurs are unchanged.
+* At 8 mA the 725 MHz signal would be about -37 dBm at the amplifier output, 40 dB below the wanted signal: that is the
+  strongest unwanted signal outside the band, and it needs filtering.
 * The output is only about 0.5 to 1.8 mW. To reach, say, +20 dBm you would need about 17 dB more gain and a harmonic filter
   after it. The amplifier's own harmonic output is not specified in the datasheet and should be measured.
 * The PGA-103+ is a wideband amplifier: it will amplify the 145 MHz leak, the 580 MHz harmonic and the close-in spurs along
@@ -172,15 +257,19 @@ maximum):
 
 1. **Choose the 70cm frequency with the close-in spurs in mind.** A "spur map" (strongest spur against carrier frequency over
    430-440 MHz in small steps) would show which frequencies are clean. This is a software-only test.
-2. **The SAW does not help with spurs near the carrier**, nor much with the 145 MHz leak (about 50 dB). A tighter
-   band-pass or a high-pass in front of the SAW would help the 145 MHz leak.
-3. **The 580 MHz 4th harmonic** (-53 dBc) wants a low-pass filter (cutoff about 470-500 MHz) after the amplifier.
+2. **The SAW does not help with spurs near the carrier**, nor much with the 145 MHz leak (about 50 dB), and it is weak near
+   725 MHz. A high-pass in front of the SAW would help the 145 MHz leak.
+3. **A low-pass filter is now the most important addition.** The 725 MHz 5th harmonic (-33 to -37 dBc) and the 580 MHz 4th
+   harmonic (-53 dBc) both need to go: a low-pass with a cutoff of about 470 MHz, with enough rejection at 580 and 725 MHz,
+   placed after the SAW (and after the amplifier too, to catch the amplifier's own harmonics).
 4. Decide what spurious limit applies to the beacon before judging these numbers; they are in dBc relative to the
    wanted signal, not absolute.
 
 ## Limitations
 
-* One SAW filter of unknown type, one board, one run, room temperature.
+* One SAW filter of unknown type, one board, room temperature. The data was measured twice (the first campaign and the bench
+  framework's runs, which agree to within 0.03 dB or MHz on the SAW figures); the first campaign's out-of-band list had the
+  window-edge blind spot described at the top.
 * TinySA readings are not calibrated; absolute levels are +/-2 dB or worse. The pad is assumed to be exactly 10 dB.
 * The TinySA's low input stops at 800 MHz.
 * The SAW's insertion loss and the unfiltered baseline were not measured in this run.

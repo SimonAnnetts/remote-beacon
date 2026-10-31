@@ -1,0 +1,11 @@
+{
+    "id": "6m-chebyshev-lpf-64MHz-10dB",
+    "output": "6m",
+    "description": "CLK0 (6m, the wanted signal is the fundamental) through a 9-pole Chebyshev low-pass filter and a 10 dB attenuator",
+    "chain": [
+        {"kind": "filter", "name": "9-pole Chebyshev low-pass", "notes": "cutoff 64 MHz; home built"},
+        {"kind": "attenuator", "name": "attenuator", "db": 10, "notes": "in front of the analyser"}
+    ],
+    "analyser": {"type": "tinysa", "port": "/dev/ttyACM1", "attenuation_db": 0, "lna": false},
+    "notes": "At 8 mA the carrier reaches the analyser at about -16 dBm, above the -25 dBm where its front end distorts. Use 2 mA or more attenuation for the spur and close-in tests (the run refuses otherwise unless --force)."
+}

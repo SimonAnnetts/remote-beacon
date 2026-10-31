@@ -36,6 +36,14 @@ Working on the bench, without filters or amplifiers yet:
 Still to come: duty-cycle and FSK modes, WSPR, GPS time and calibration, and the filter and
 amplifier hardware.
 
+## Testing
+
+* `python3 -m unittest discover -s tests/unit -v` runs the firmware's logic tests on the PC (no hardware).
+* `tests/bench/` is an RF bench for the Si5351 outputs: it steps an output from the PC, measures it with a TinySA Ultra
+  over USB, and stores the result with a description of the filters fitted, in `tests-results/`. A local web UI
+  (`python3 tests/bench/serve.py`, port 3333, served from the PC, not the Pico) shows runs, compares them and plots trends.
+  See [tests/bench/README.md](tests/bench/README.md).
+
 ## Setup
 
 1. Flash MicroPython (v1.29 was used) onto the Pico W.

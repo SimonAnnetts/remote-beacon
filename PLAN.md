@@ -233,6 +233,8 @@ analogue analyser with its input kept low: check each spur with a 10 dB attenuat
 spur moves 10 dB, an analyser-made one 20 dB or more), and move the carrier by 0.5 MHz to see how
 each spur shifts (2nd harmonic by 1 MHz, 9th by 4.5 MHz, a fixed clock not at all).
 
+(SUPERSEDED, kept for history: the wide-span spur readings in this paragraph, such as -32 dBc at +/-2 MHz, were artefacts of the
+stepped sweep, and the out-of-band list missed the 725 MHz 5th harmonic. See docs/70cm-output-characterisation.md.)
 70cm with the SAW filter fitted (carrier 145 MHz, so 435 MHz wanted; 10 dB pad; stepped TinySA, so
 frequencies are only good to a few hundred kHz): at 2 mA the wanted signal is -34.7 dBm, the
 145 MHz fundamental is -84 dBm (-49 dBc) and a spur at 580 MHz (4th harmonic) is -80 dBm (-45 dBc).
@@ -261,6 +263,20 @@ MHz) should be re-checked the same way. The paragraph below is therefore superse
 The 434.6/435.3 MHz spurs fall inside the SAW passband (133 kHz below and 100 kHz above the
 145 MHz fundamental before tripling) and are probably PLLB fractional-N spurs (VCO/xtal =
 34.8). Possible mitigation: choose the fractional denominator to move them.
+
+## Test infrastructure
+
+* **Unit tests** (`tests/unit/`): the firmware's logic runs on the PC against a simulated chip and clock, and the WSPR
+  encoder is checked with the real `wsprd` decoder when it is installed.
+* **Bench measurements** (`tests/bench/`): repeatable RF measurements of one output at a time, controlled over USB (Pico and
+  TinySA Ultra). Each run stores its raw data and a description of the chain of filters between the Si5351 and the analyser in
+  `tests-results/<output>/`. Tests: drive levels, **spur map** (spurs against carrier frequency), close-in spectra, wide
+  spectrum (out-of-band emissions) and chain response (traces filters such as the 70cm SAW).
+* **Results UI**: `python3 tests/bench/serve.py` on port 3333 (standard library, localhost, read-only). It lists runs, draws
+  each test, overlays two runs and shows the change in every headline figure, and plots figures over time per setup, so a
+  new filter can be compared with the old one. Nothing from the tests goes on the Pico or into its web interface.
+* MicroPico's **Upload project** would copy these folders to the Pico, so `tests`, `tests-results` and `docs` are in
+  `micropico.pyIgnore` in `.vscode/settings.json`.
 
 ## Milestones
 
