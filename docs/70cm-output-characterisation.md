@@ -206,11 +206,24 @@ raised. At 8 mA with 0, 10 and 20 dB of analyser attenuation the readings were:
 Every signal, 725 MHz included, stays where it is. (The wide-spectrum test now repeats this check automatically for the
 strongest out-of-band signals it finds, and marks each one "real signal" or "made by the analyser".)
 
-**Why it is so strong:** the carrier is a square wave, whose 5th harmonic is only 4.4 dB below the 3rd (the wanted signal).
-This SAW filter evidently rejects 725 MHz by only about 30 dB (a rough estimate that assumes an ideal square wave), against
-45-47 dB at 470-500 MHz where it was measured: SAW filters often have poor rejection at particular frequencies above their
-passband. The SAW sweep (section 1) stopped at 500 MHz and never looked there; the response test now also reads the 5th
-order, which traces the filter's rejection across 717-783 MHz.
+**Why it is so strong:** the carrier is a square wave, whose 5th harmonic is only 4.4 dB below the 3rd (the wanted signal),
+and this SAW does little to stop it. The response test (procedure v2, run `2026-10-31T02-51-44`) reads the 5th order as the
+wanted frequency is stepped, which traces what the SAW does to the carrier's 5th harmonic from 567 to 790 MHz (wanted
+frequencies 340-474 MHz). At 8 mA, as read at the analyser:
+
+| Wanted frequency, MHz | 5x carrier, MHz | 5th harmonic, dBm | Relative to the wanted signal |
+|---|---|---|---|
+| 425 | 708 | -67.4 | -39 dBc |
+| 430 | 717 | -67.7 | -39 dBc |
+| 435 | 725 | -66.2 | -37 dBc |
+| 440 | 733 | -66.8 | -38 dBc |
+| 445 | 742 | -69.8 | -35 dBc (the wanted signal is already falling) |
+
+* Across the whole 70cm band the 5th harmonic is **-37 to -40 dBc** (worst at 436.25 MHz).
+* It is **flat at about -67 dBm (-65 to -70)** wherever it falls between 567 and 790 MHz. The SAW does not discriminate in this
+  range, so there is no "bad frequency" to avoid: it is a general weakness of the filter at these frequencies.
+* Taking the 5th harmonic as 4.4 dB below the 3rd at the source (ideal square wave), the SAW attenuates it by only about 34 dB,
+  against 46-50 dB for the 340-500 MHz range of section 1. That is an estimate; the source's harmonic ratio was not measured.
 
 ## 4. Level against drive (435 MHz)
 
@@ -267,9 +280,12 @@ maximum):
 
 ## Limitations
 
-* One SAW filter of unknown type, one board, room temperature. The data was measured twice (the first campaign and the bench
-  framework's runs, which agree to within 0.03 dB or MHz on the SAW figures); the first campaign's out-of-band list had the
-  window-edge blind spot described at the top.
+* One SAW filter of unknown type, one board, room temperature. The measurements are repeatable: two full bench runs 23 minutes
+  apart agree to within 0.8 dB on all 18 headline figures (the SAW bandwidth to 0.03 MHz, the spur map frequency by frequency to a
+  mean of 0.5 dB, with a worst single point of 2.9 dB), so a change of a couple of dB between runs is a real change. The first
+  campaign's out-of-band list had the window-edge blind spot described at the top.
+* The baseline for this setup is run `2026-10-31T02-51-44__70cm-saw-unknown-10dB` (all five tests, procedure versions in the
+  file); the earlier run `02-28-15` used wide-spectrum v1 and response v1 (no 5th order, no out-of-band checks).
 * TinySA readings are not calibrated; absolute levels are +/-2 dB or worse. The pad is assumed to be exactly 10 dB.
 * The TinySA's low input stops at 800 MHz.
 * The SAW's insertion loss and the unfiltered baseline were not measured in this run.

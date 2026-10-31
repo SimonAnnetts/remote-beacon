@@ -247,6 +247,11 @@ PLLB to see whether the spurs follow the PLL, shift the carrier to see if they k
 offset, and try the only integer-ratio frequency (437.566 MHz) to see if they are fractional-N
 products. The 435.2 MHz carrier reading is probably stepped-sweep error; confirm with a narrow span.
 
+70cm baseline (run 2026-10-31T02-51-44, frozen procedure, all five tests): the SAW passband is 420.9-444.1 MHz at -3 dB;
+the strongest spur across 430-440 MHz ranges from -56 dBc (best, 431.25 MHz) to -35 dBc (worst, 436.75 MHz), explained by
+fractional-N PLL spurs near the integer-ratio frequency 437.566 MHz; and the strongest out-of-band signal is the carrier's
+**5th harmonic at 725 MHz, -33 to -37 dBc, confirmed real**, which the SAW attenuates by only about 34 dB anywhere from 567 to
+790 MHz. A low-pass filter after the SAW is needed. Two full runs 23 minutes apart agree to within 0.8 dB.
 A full characterisation of the 70cm output with the SAW filter, including the SAW's response, spurs against
 carrier frequency, out-of-band emissions and a PGA-103+ baseline, is in docs/70cm-output-characterisation.md.
 
