@@ -211,6 +211,28 @@ a time unless stated.
 | CLK2 | 435.0 MHz (3rd harmonic) | -34.8 dBm | Only ~7 dB below the fundamental |
 | CLK2 | 434.6 / 435.3 MHz | -68 dBm | ~33 dB below wanted; other spurs <= -88 dBm |
 
+6m with a 9-pole Chebyshev low-pass filter (64 MHz cutoff) fitted: no harmonics visible above
+-70 dBm from the carrier to 510 MHz (before the filter: 2nd/3rd/5th at -45/-34/-35 dBm), so the
+3rd harmonic is now at least 36 dB lower. Carrier through the filter (10 dB pad): -27 dBm at 2 mA
+and -15.7 dBm at 8 mA, i.e. ~5 dB and ~3.7 dB filter loss against -22/-12 dBm unfiltered; the
+difference may be the source impedance changing with drive. 2 mA versus 8 mA is now 11.3 dB
+apart (~57% AM depth). The analyser's noise floor appeared to rise from -90 to -70 dBm while
+transmitting; the cause was the TinySA's auto attenuator stepping from 0 to 13 dB when a signal
+appeared. With it fixed, the floor stays near -90 dBm.
+
+Remaining spurs on 6m after the filter (carrier 51 MHz, fixed attenuation): at 2 mA (carrier
+-27.6 dBm) spurs at ~36.4 MHz (-82 dBm), ~66.5 MHz (-82) and 458.8 MHz (-86), all about -54 to
+-58 dBc; at 8 mA the strongest were 102 MHz (-71 dBm, the 2nd harmonic), 36.4 MHz (-73) and
+458.8 MHz (-77, the 9th harmonic). The 36.4 and 66.5 MHz spurs are not harmonics of 51 MHz. They
+could be Si5351 VCO products (with only 6m running the VCO is at 800 MHz, and 800/22 and 800/12
+are 36.4 and 66.7 MHz), but that may be coincidence.
+These readings are NOT yet trustworthy. With the 10 dB pad removed (carrier -5 dBm) the 102 MHz
+spur rose 45 dB for a 9 dB rise in the carrier, so the TinySA front end overloads above roughly
+-25 dBm, and its stepped sweep gives inconsistent levels when the span changes. To repeat on the
+analogue analyser with its input kept low: check each spur with a 10 dB attenuator step (a real
+spur moves 10 dB, an analyser-made one 20 dB or more), and move the carrier by 0.5 MHz to see how
+each spur shifts (2nd harmonic by 1 MHz, 9th by 4.5 MHz, a fixed clock not at all).
+
 The 434.6/435.3 MHz spurs fall inside the SAW passband (133 kHz below and 100 kHz above the
 145 MHz fundamental before tripling) and are probably PLLB fractional-N spurs (VCO/xtal =
 34.8). Possible mitigation: choose the fractional denominator to move them.
