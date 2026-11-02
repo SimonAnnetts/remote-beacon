@@ -1,0 +1,37 @@
+{
+    "id": "70cm-saw-unknown-tpad-10dB-12cm-pigtail",
+    "output": "70cm",
+    "description": "CLK2 (carrier about 145 MHz, 3rd harmonic wanted) through 12 cm of pigtail, an unidentified SAW filter, the 27-33-27 ohm T pad and the BNC attenuator marked 10 dB",
+    "chain": [
+        {
+            "kind": "cable",
+            "name": "12 cm pigtail from the Si5351 board to the SAW filter",
+            "notes": "the same pigtail as used on 2m and 6m; type not recorded"
+        },
+        {
+            "kind": "filter",
+            "name": "SAW filter",
+            "part": "unknown",
+            "notes": "wide passband, about 421-444 MHz at -3 dB (measured 2026-10-31)"
+        },
+        {
+            "kind": "attenuator",
+            "name": "attenuator",
+            "db": 25.8,
+            "notes": "in front of the analyser; marked 10 dB, measured 25.8 dB at 435 MHz"
+        },
+        {
+            "kind": "attenuator",
+            "name": "27-33-27 ohm T pad",
+            "db": 9.9,
+            "notes": "loses only 9.9 dB at 435 MHz (15 dB at 145 MHz; the carbon resistors are not flat to UHF). Measured in place on 2026-11-01 as the drop in level after fitting it, at 2, 4, 6 and 8 mA (9.84 to 10.0 dB), with the pigtail, SAW and attenuator in line."
+        }
+    ],
+    "analyser": {
+        "type": "tinysa",
+        "port": "/dev/ttyACM1",
+        "attenuation_db": 0,
+        "lna": false
+    },
+    "notes": "Compare with 70cm-saw-unknown-10dB (SAW directly on the board, no pad) and 70cm-saw-unknown-10dB-12cm-pigtail (setup only; the run was refused, the signal being 6 dB too strong). With the 12 cm pigtail the 435 MHz level rose by 6 to 10 dB (measured 2026-11-01), so the T pad was added. Total pad 35.7 dB (25.8 + 9.9, about +/-0.3 dB). Levels leaving the SAW are therefore comparable with the baseline only at the dBc level, not in dBm: the pigtail changes the output level."
+}

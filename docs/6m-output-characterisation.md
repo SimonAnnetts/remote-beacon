@@ -203,6 +203,34 @@ should be similar or better), maximum input +21 dBm.
    choice (an integer ratio, or a different crystal frequency) or a narrow band-pass filter.
 4. **Check the 50.05 MHz and 50.293 MHz frequencies directly** before relying on them: they are not in the map.
 
+## 7. With a 12 cm pigtail before the filter (2026-11-01)
+
+The same chain was measured again with a 12 cm pigtail between the Si5351 board and the filter, to see if moving the filter away
+from the board reduces high-frequency coupling (it appeared to on 2m). Run
+[`../tests-results/6m/2026-11-01T19-09-42__6m-chebyshev-lpf-64MHz-12cm-pigtail-38dB.json`](../tests-results/6m/2026-11-01T19-09-42__6m-chebyshev-lpf-64MHz-12cm-pigtail-38dB.json),
+setup `6m-chebyshev-lpf-64MHz-12cm-pigtail-38dB`; same filter, pad set (37.9 dB), cable and adapters, nothing else changed.
+
+| | Baseline | With pigtail |
+|---|---|---|
+| Filter -3 dB point | 66.2 MHz | 65.8 MHz |
+| Carrier at 51 MHz, 8 mA | -25.9 dBm | -25.8 dBm |
+| Highest level the analyser saw, 8 mA | -24.8 dBm (over) | -24.8 dBm (over) |
+| Worst close-in spur at 51 MHz, 2 / 8 mA | -52.2 / -37.2 dBc | -50.2 / -36.0 dBc |
+| Spur map median, 2 / 8 mA | -48.8 / -40.3 dBc | -49.0 / -43.0 dBc |
+| Worst spur on the map, 2 / 8 mA | -46.7 / -32.7 dBc | -43.5 / -31.5 dBc |
+| 50.000 MHz, 2 / 8 mA | -59.9 / -61.4 dBc | -62.6 / -61.3 dBc |
+| 48 / 54 MHz spurs, 8 mA | -51.7 / -52.7 dBc | -47.8 / -48.2 dBc |
+| 35 / 46 / 56 MHz spurs, 8 mA | -56 / -58 / -58 dBc | -59 / -60 / -60.5 dBc |
+| 255 MHz (5th harmonic) / 459 MHz (9th), 8 mA | -60.7 / -62.8 dBc | not reported |
+
+* **The pigtail does not change the close-in spurs** (differences of a few dB in both directions) or the filter. These spurs
+  are inside the pass band and come from the Si5351's own fractional-N synthesis, so moving a filter cannot affect them. The
+  clean 50.000 MHz result is unchanged.
+* The 255 MHz entry disappeared, falling by at least 3 dB; that fits the earlier suspicion that it was partly pickup, but does
+  not prove it. The 459 MHz entry was only about 1 dB above the detection limit, so nothing can be said about it.
+* The 8 mA level was again 0.2 dB over the limit, as in the baseline, so the same caution applies to the 8 mA close-in figures.
+* On 6m the pigtail is not needed for the spurs. It may help a little with high-frequency pickup.
+
 ## Limitations
 
 * The pad was measured at 2 mA and at 20-180 MHz; at 8 mA with the filter in front it may differ slightly (the combined
@@ -213,7 +241,7 @@ should be similar or better), maximum input +21 dBm.
 * The 8 mA headroom was marginal (-25.9 dBm against -25). The check on the +/-2 MHz spurs, done separately, shows the
   8 mA close-in spurs are not caused by it, but a repeat with an extra 6 dB of pad would remove the doubt. It would cost
   about 6 dB of detection range at 2 mA.
-* Only one filter and one pad set have been measured. No amplifier or antenna was connected.
+* Only one filter and one pad set have been measured (with and without a 12 cm pigtail). No amplifier or antenna was connected.
 * The TinySA is not a calibrated instrument: the relative numbers (dB, dBc) are more reliable than the absolute dBm.
 * The same attenuator marked "10 dB" was used for the 70cm baseline. Its loss at 435 MHz was measured afterwards as
   25.8 dB, and the 70cm document has been corrected (its absolute levels were 15.8 dB too low).

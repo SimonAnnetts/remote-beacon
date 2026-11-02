@@ -290,6 +290,135 @@ Predicted at the amplifier output, assuming the amplifier is linear. This is **l
 4. Decide what spurious limit applies to the beacon before judging these numbers; they are in dBc relative to the
    wanted signal, not absolute.
 
+## 7. With a 12 cm pigtail before the SAW (2026-11-01)
+
+The chain was measured again with a 12 cm pigtail between the Si5351 board and the SAW, to see if moving the filter away from the
+board reduces high-frequency coupling (it appeared to on 2m). The first attempt was refused by the runner: the signal at the
+analyser was -23.2 dBm at 8 mA, 6 dB higher than the baseline and over the -25 dBm limit. A series of short checks found out why
+(drive 2 to 8 mA, 435 MHz, analyser internal attenuation 10 to 20 dB so the front end was not overloaded):
+
+| Chain | 2 mA | 4 mA | 6 mA | 8 mA |
+|---|---|---|---|---|
+| Straight cable, no pigtail, no SAW (at 435 MHz, 2 mA only) | -9.2 dBm | | | |
+| Pigtail, no SAW (same, 2 mA only) | -9.5 dBm | | | |
+| Pigtail, "10 dB" attenuator, no SAW | -35.2 | -28.7 | -27.0 | -23.2 |
+| SAW directly on the board, attenuator (reproduces the baseline) | -34.7 | -32.0 | -32.5 | -29.5 |
+| Pigtail, SAW, attenuator | **-28.9** | **-24.2** | **-22.9** | **-22.7** |
+| Pigtail, SAW, T pad, attenuator | -38.7 | -34.2 | -32.7 | -32.7 |
+
+(Analyser readings, after the attenuator and any T pad.)
+
+* **The pigtail alone costs 0.3 dB** (-9.2 to -9.5 dBm at 435 MHz, flat to +/-0.2 dB from 425 to 445 MHz), so the cable is not the
+  loss. The "10 dB" attenuator loses 25.5 dB at 435 MHz here (25.8 in the baseline), flat from 425 to 445 MHz.
+* **With the SAW in line, the pigtail raises the 435 MHz output by 5.8, 7.8, 9.7 and 6.8 dB** at 2, 4, 6 and 8 mA compared
+  with the SAW directly on the board. At 2 to 6 mA the result is also 4 to 6 dB higher than with no SAW at all. A SAW cannot add
+  level, so this is an effect on the source. The idea that fits is that the SAW reflects the fundamental and the other harmonics
+  that are outside its pass band, and with a 12 cm line in between, what comes back reshapes the Si5351's output and
+  strengthens the 3rd harmonic. **This is a hypothesis, not a measurement.** What is measured is that the level depends on the
+  line between the board and the SAW. A different length would probably give a different level.
+* **The baseline's non-monotonic drive curve** (6 mA lower than 4 mA) is reproduced with the SAW directly on the board, so it is
+  a feature of that zero-length connection. With the pigtail the level rises to 6 mA and then stops: 6 and 8 mA are the same.
+* **The T pad loses only 9.9 dB at 435 MHz** (9.84 to 10.0 dB at all four drives, measured in place), not the 15 dB it has at
+  145 MHz: the carbon resistors are not flat to UHF. The total pad for this run is therefore 25.8 + 9.9 = **35.7 dB** (about
+  +/-0.3 dB, as the attenuator reads 25.5 to 25.8 dB). The pad is recorded in setup `70cm-saw-unknown-tpad-10dB-12cm-pigtail`.
+
+Full suite with the T pad added: run
+[`../tests-results/70cm/2026-11-01T20-08-05__70cm-saw-unknown-tpad-10dB-12cm-pigtail.json`](../tests-results/70cm/2026-11-01T20-08-05__70cm-saw-unknown-tpad-10dB-12cm-pigtail.json).
+The 8 mA level at the analyser was -32.7 dBm (limit -25).
+
+| | Baseline | Pigtail + T pad |
+|---|---|---|
+| Total pad | 25.8 dB | 35.7 dB |
+| Wanted leaving the SAW, 2 / 4 / 6 / 8 mA | -8.6 / -6.4 / -6.9 / -3.1 dBm | -2.2 / +2.0 / +3.0 / +3.0 dBm |
+| Worst close-in spur at 435 MHz, 8 mA | -52.9 dBc | -52.3 dBc |
+| Worst close-in spur at 432.45 MHz, 2 / 8 mA | -49.7 / -46.1 dBc | -48.4 / -41.6 dBc |
+| Worst close-in spur at 438 MHz, 2 / 8 mA | -38.5 / -38.1 dBc | -37.1 / -39.0 dBc |
+| Spur map median, 2 / 8 mA | -48.9 / -45.4 dBc | -51.3 / -46.4 dBc |
+| Worst spur on the map | -34.8 dBc (436.75 MHz, 2 mA); -35.8 dBc (437.0 MHz, 8 mA) | -33.8 dBc (438.25 MHz, 2 mA); -36.0 dBc (438.25 MHz, 8 mA) |
+| Best spur on the map, 2 / 8 mA | -56.6 / -56.1 dBc (431.25 MHz) | -56.9 (434.75 MHz) / -55.8 dBc (431.25 MHz) |
+| 5th harmonic, 725 MHz, 2 mA | -32.8 dBc | not reported |
+| 5th harmonic, 725 MHz, 8 mA | -36.3 dBc | -46.5 dBc |
+| 145 MHz leak, 8 mA / 580 MHz, 8 mA | -47.3 / -53.7 dBc | not reported |
+| SAW -3 dB points | 420.9 to 444.1 MHz | 421.6 to 444.7 MHz |
+| Passband ripple | 1.6 dB | 3.5 dB |
+
+* **The close-in spurs are unchanged** apart from a 4.5 dB worse figure at 432.45 MHz and 8 mA. The clean region is still about
+  431 to 432 MHz and the bad region 436 to 438.5 MHz.
+* **The 5th harmonic at 725 MHz is 10 dB better in dBc at 8 mA** (at least 18 dB at 2 mA, where it fell below the detection
+  limit). How much of this is the 6 dB higher wanted level cannot be told, because the raw 725 MHz level and the T pad's loss at
+  725 MHz were not measured. The 145 MHz leak and 580 MHz entries also fell below the threshold.
+* **The ripple and rejection figures are less reliable than the baseline's.** The extra 10 dB of pad leaves less range above
+  the analyser's noise floor (so the measured rejection, 18.7 dB high side against 24.8, is partly floor-limited), and the
+  ripple may include a real effect of the line.
+* **For a PGA-103+ stage** (gain about 21.8 dB at 435 MHz, P1dB +21.5 dBm): with the pigtail the SAW output at 2 mA is -2.2 dBm,
+  which gives about +19.6 dBm (91 mW) from the amplifier, below its compression point. At 4 mA and above the SAW output is +2
+  to +3 dBm, which would put the amplifier at +24 to +25 dBm, past P1dB, so a higher drive would need attenuation ahead of it. The
+  figures in section 5 apply to the baseline connection only.
+* **Without a pad at the source, the line length between the board and the SAW is a design parameter** for 70cm (see the next subsection). A few lengths (for example 6, 12
+  and 18 cm) would show if the effect varies with length. That has not been done.
+
+### A pad at the source removes the dependence on line length (2026-11-01)
+
+The 6 to 10 dB rise could be explained by reflections from the SAW getting back to the Si5351 through the pigtail. A pad directly at
+the output should stop that: a reflection passes through the pad twice, so a pad of X dB cuts it by 2X dB, and the source sees a
+steady load. To test this, the carbon T pad (9.9 dB at 435 MHz) was fitted **directly at the CLK2 output, ahead of the SAW**,
+and the same four drives were measured with and without the 12 cm pigtail between the pad and the SAW (analyser readings,
+after the SAW and the "10 dB" attenuator):
+
+| Chain | 2 mA | 4 mA | 6 mA | 8 mA |
+|---|---|---|---|---|
+| T pad, SAW (F1) | -47.4 dBm | -41.7 | -38.2 | -36.2 |
+| T pad, 12 cm pigtail, SAW (F2) | -48.9 | -43.0 | -39.7 | -37.2 |
+| Pigtail effect (F2 minus F1) | **-1.5 dB** | **-1.3** | **-1.5** | **-1.0** |
+| For comparison, without the pad: pigtail effect | +5.8 | +7.8 | +9.7 | +6.8 |
+
+* With the pad at the source, **the pigtail changes the level by only -1.0 to -1.5 dB** (a little loss, as the pigtail alone costs
+  0.3 dB; the remainder is probably a small mismatch), instead of raising it by 6 to 10 dB.
+* The pad also makes the SAW behave as a fixed-loss element. Compared with the straight pigtail and no SAW (C1 above), the T pad
+  plus SAW loses 11.2 to 13.0 dB at the four drives (about 12.4 dB: the pad's 9.9 dB plus roughly 2.5 dB for the SAW), and the
+  drive curve rises smoothly with no dip at 6 mA. Without the pad, the SAW's apparent effect varied with drive from +0.5 to
+  -6 dB.
+* This fits the reflection explanation. It is **not a direct measurement of the reflection**, but it is the result expected if
+  reflections were the cause.
+* **Design consequence:** a pad at the Si5351 output (a proper SMA attenuator of 6 dB or more, rated well above 435 MHz, since the
+  carbon T pad is not flat at UHF) should make the output level and spurs repeatable whatever filter and cable follow it. It
+  costs level that a PGA-103+ stage could not use anyway. The same reasoning applies to 6m and 2m, but it was only tested on 70cm.
+
+**Full suite with the pad at the source.** Run
+[`../tests-results/70cm/2026-11-01T20-41-48__70cm-tpad-12cm-pigtail-saw-unknown-10dB.json`](../tests-results/70cm/2026-11-01T20-41-48__70cm-tpad-12cm-pigtail-saw-unknown-10dB.json),
+setup `70cm-tpad-12cm-pigtail-saw-unknown-10dB`: CLK2, the T pad (9.9 dB), the 12 cm pigtail, the SAW, the "10 dB" attenuator
+(25.8 dB), the analyser. `pad_db` is 25.8, so the levels are "leaving the SAW" as in the baseline, but they include the T pad's
+loss, so they read about 12 dB lower than the baseline's. The 8 mA level at the analyser was -37.2 dBm (limit -25).
+
+| | Baseline (SAW on the board) | Pigtail, T pad after the SAW | **T pad at the source, pigtail, SAW** |
+|---|---|---|---|
+| Wanted leaving the SAW, 2 / 4 / 6 / 8 mA | -8.6 / -6.4 / -6.9 / -3.1 dBm | -2.2 / +2.0 / +3.0 / +3.0 | -23.4 / -17.4 / -13.4 / -11.1 (includes the T pad) |
+| Drive curve | dips at 6 mA | flat from 6 to 8 mA | smooth, rising |
+| SAW -3 dB points | 420.9 to 444.1 MHz | 421.6 to 444.7 | **420.9 to 444.2** |
+| Passband ripple | 1.6 dB | 3.5 dB | **1.6 dB** |
+| Rejection, low / high side | 41.3 / 24.8 dB | 35.9 / 18.7 | **43.3 / 24.6** |
+| Worst close-in spur at 435 MHz, 4 / 6 / 8 mA | -52.8 / -52.8 / -52.9 dBc | -53.5 / -53.1 / -52.3 | -52.7 / -53.3 / -51.1 |
+| Worst close-in spur at 432.45 MHz, 8 mA | -46.1 dBc | -41.6 | -47.1 |
+| Worst close-in spur at 438 MHz, 2 / 8 mA | -38.5 / -38.1 dBc | -37.1 / -39.0 | -38.9 / -35.8 |
+| Spur map median, 8 mA | -45.4 dBc | -46.4 | -45.1 |
+| Spur map worst / best, 8 mA | -35.8 (437.0 MHz) / -56.1 (431.25 MHz) | -36.0 (438.25) / -55.8 (431.25) | **-31.2 (440.0 MHz)** / -55.1 (431.25 MHz) |
+| 725 MHz, 8 mA | -36.3 dBc | -46.5 | -39.8 |
+| 580 MHz, 8 mA | -53.7 dBc | not reported | -50.5 |
+
+* **The SAW response is back to the baseline's** (same -3 dB points, same 1.6 dB ripple, same rejection to within 2 dB). So the
+  worse ripple and rejection in the unpadded pigtail run were a real effect of the line on the source, not just a loss of
+  analyser range. This is the strongest single piece of support for the reflection explanation.
+* **The close-in spurs match the baseline** at 435 and 432.45 MHz; the 4.5 dB loss at 432.45 MHz in the unpadded pigtail run is
+  gone. The worst point on the 8 mA map moved to 440.0 MHz (-31.2 dBc), 4.6 dB worse than the baseline's worst; I have not
+  compared that one frequency across the runs, so I cannot say if it is a real change.
+* **The 725 MHz harmonic is -39.8 dBc**: 3.5 dB better than the baseline but 6.7 dB worse than the unpadded pigtail run. A large part
+  of that run's 10 dB improvement was therefore probably just the 6 to 10 dB higher wanted level, not less 725 MHz.
+* **The 2 mA data is range-limited.** With the pad at the source the 2 mA wanted signal is only -49 dBm at the analyser, so no
+  close-in spur could be measured at 432.45 or 435 MHz at that drive (shown as none), and the 2 mA spur map's median and best figures
+  mostly reflect the noise floor. Use the 4 to 8 mA figures; a repeat with less pad after the SAW would restore the range.
+* **For a PGA-103+ stage** this connection gives -11.1 dBm at 8 mA leaving the SAW (with the T pad's 9.9 dB), so about +10.7 dBm
+  out. A 6 dB pad at the source in place of the T pad would give about 4 dB more.
+
 ## Limitations
 
 * One SAW filter of unknown type, one board, room temperature. The measurements are repeatable: two full bench runs 23 minutes
@@ -298,7 +427,7 @@ Predicted at the amplifier output, assuming the amplifier is linear. This is **l
   campaign's out-of-band list had the window-edge blind spot described at the top.
 * The baseline for this setup is run `2026-10-31T02-51-44__70cm-saw-unknown-10dB` (all five tests, procedure versions in the
   file); the earlier run `02-28-15` used wide-spectrum v1 and response v1 (no 5th order, no out-of-band checks).
-* TinySA readings are not calibrated; absolute levels are +/-2 dB or worse. The pad was assumed to be 10 dB in the first version of this document; it was measured at 25.8 dB at 435 MHz afterwards (see the correction at the top). The raw run files still record a 10 dB pad until they are patched.
+* TinySA readings are not calibrated; absolute levels are +/-2 dB or worse. The pad was assumed to be 10 dB in the first version of this document; it was measured at 25.8 dB at 435 MHz afterwards (see the correction at the top). The raw run files and the setup were patched to 25.8 dB.
 * The TinySA's low input stops at 800 MHz.
-* The SAW's insertion loss and the unfiltered baseline were not measured in this run.
+* The SAW's insertion loss was not measured in the baseline run. Section 7 shows it is not a fixed loss for this harmonic: with a pigtail the level with the SAW is higher than without it.
 * The amplifier figures are calculated from the datasheet, not measured.

@@ -1,0 +1,11 @@
+{
+    "id": "2m-chebyshev-lpf-163MHz-37dB",
+    "output": "2m",
+    "description": "CLK1 (2m, the wanted signal is the fundamental) through a home-built 9-pole Chebyshev low-pass filter (163 MHz cutoff) and a measured 37 dB pad set",
+    "chain": [
+        {"kind": "filter", "name": "9-pole Chebyshev low-pass", "part": "home built", "notes": "designed cutoff 163 MHz, measured -3 dB point 173 MHz; replaces both cheap filters (200 MHz low-pass and 137M/140M band-pass); screening not recorded"},
+        {"kind": "attenuator", "name": "pad set", "db": 37.4, "notes": "measured, not the labels: the 27-33-27 ohm T pad (15 dB) in series with the BNC attenuator marked 10 dB (really 27 dB), joined with SMA/BNC adapters. Measured together without a filter on 2026-10-31 as 37.4 dB at 145 MHz (36.9 to 38.4 dB from 20 to 180 MHz)."}
+    ],
+    "analyser": {"type": "tinysa", "port": "/dev/ttyACM1", "attenuation_db": 0, "lna": false},
+    "notes": "Compare with the other 2m runs in tests-results/2m. Same pad set, so levels are comparable. The pad value was measured without any filter in front of it. The response test only covers up to 200 MHz; harmonics are seen in the wide spectrum test."
+}

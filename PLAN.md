@@ -278,6 +278,34 @@ in series with the band-pass, showed that the low-pass filters almost nothing be
 the close-in spurs, and that two unshielded filters touching each other couple around each other (725 MHz harmonic -34 dBc,
 against -50 dBc with 15 cm of coax between them). The 725 MHz pickup floor is about -55 dBc at 8 mA until the board is shielded.
 
+The home-built 9-pole Chebyshev low-pass (designed 163 MHz, measured -3 dB at 173 MHz) was then run alone on 2m. It removes
+the 2nd harmonic and needs no coax spacing, with close-in spurs about as good as the best pair of cheap filters (8 mA median
+-46 dBc; 3 to 5 dB worse than the cheap low-pass alone). The 725 MHz pickup (-43 dBc) and the 5 MHz spurs (-45 dBc at 8 mA) are
+unchanged by any filter. It can replace both cheap filters; a 580 MHz entry at -48 dBc at 8 mA is unexplained. The run made with the
+band-pass accidentally still in line was relabelled as its own set-up.
+
+A rebuilt 7-pole low-pass (designed about 155 MHz, measured -3 dB at 149 MHz; PCB with a ground plane, unscreened) connected to
+the Si5351 board by a 12 cm pigtail gave the cleanest 2m result so far: 725 MHz -61 dBc at 8 mA (other filters -43 to -50 dBc),
+8 mA close-in spurs -46 to -53 dBc across 144.0 to 146.0 MHz, 2nd to 4th harmonics -58 dBc or better. The 725 MHz "pickup floor"
+quoted above was therefore a property of the old layout, not a limit of the board. The filter was rebuilt and moved at the same time,
+so which one helped is not known; the 7-pole has not yet been run without the pigtail.
+
+The 12 cm pigtail was then tried on the other bands. On 6m it changed nothing measurable (the close-in spurs are inside the pass
+band and come from the synthesis). On 70cm it did two things: the close-in spurs were unchanged and the 725 MHz 5th harmonic was
+10 dB better in dBc, but the wanted 435 MHz level with the SAW rose by 6 to 10 dB (measured 2026-11-01: SAW directly on the board
+-29.5 dBm at the analyser at 8 mA, with the pigtail -22.7 dBm). The pigtail alone costs only 0.3 dB, so the level depends on the line between
+the board and the SAW, probably through what the SAW reflects back to the Si5351 (a hypothesis). The runner refused the first
+attempt as over its -25 dBm limit; the carbon T pad turned out to lose only 9.9 dB at 435 MHz (15 dB at 145 MHz), and the 70cm
+run used 35.7 dB of pad in total. For a PGA-103+ stage, 2 mA with the pigtail gives about +19.6 dBm out; higher drives would
+compress it. A pad at the output stops that: with the T pad (9.9 dB at 435 MHz) directly on the CLK2 output, ahead of the SAW, the 12 cm
+pigtail changed the level by only -1.0 to -1.5 dB, and the SAW acted as a fixed loss of about 2.5 dB with a smooth drive curve. This
+supports the reflection explanation (not directly measured) and suggests fitting a proper attenuator of about 6 dB directly at each
+Si5351 output, which costs level that the PGA-103+ could not use anyway. Remaining to try: the full-suite effect of such a pad on
+the spurs of each band, the 6m and 2m outputs with an output pad, and other line lengths. The full 70cm suite with the T pad at
+the source, the pigtail and the SAW (2026-11-01) brought the SAW response back to the baseline's (ripple 1.6 dB, same edges), kept the
+close-in spurs at the baseline's level (8 mA median -45 dBc), and gave 725 MHz -40 dBc (baseline -36, unpadded pigtail -46.5, so
+part of that run's improvement was just the higher wanted level). The 2 mA spur data is range-limited with that much pad.
+
 Controlled re-measurement of 70cm over USB (tinysa.py helper in the scratchpad: fixed 30 kHz RBW,
 25 kHz steps, 8 sweeps averaged, 8 mA, SAW fitted, "10 dB" pad (really 25.8 dB); repeatable to about 0.5 dB):
 carrier 435.000 MHz at -29.7 dBm. The +/-0.1 MHz "spurs" are the analyser's own RBW skirt (their dBc

@@ -1,0 +1,31 @@
+{
+    "id": "2m-lpf-7pole-12cm-pigtail-37dB",
+    "output": "2m",
+    "description": "CLK1 (2m, the wanted signal is the fundamental) through 12 cm of pigtail, a rebuilt home-made 7-pole low-pass filter on a PCB with a ground plane (unscreened), and a measured 37 dB pad set",
+    "chain": [
+        {
+            "kind": "cable",
+            "name": "12 cm pigtail from the Si5351 board to the filter",
+            "notes": "moves the filter away from the board to reduce high-frequency coupling between them; type not recorded"
+        },
+        {
+            "kind": "filter",
+            "name": "7-pole low-pass",
+            "part": "home built on a PCB with a ground plane underneath, better constructed than the 9-pole",
+            "notes": "designed cutoff about 155 MHz (measured -3 dB point 149 MHz); not screened"
+        },
+        {
+            "kind": "attenuator",
+            "name": "pad set",
+            "db": 37.4,
+            "notes": "measured, not the labels: the 27-33-27 ohm T pad (15 dB) in series with the BNC attenuator marked 10 dB (really 27 dB), joined with SMA/BNC adapters. Measured together without a filter on 2026-10-31 as 37.4 dB at 145 MHz (36.9 to 38.4 dB from 20 to 180 MHz)."
+        }
+    ],
+    "analyser": {
+        "type": "tinysa",
+        "port": "/dev/ttyACM1",
+        "attenuation_db": 0,
+        "lna": false
+    },
+    "notes": "Compare with 2m-chebyshev-lpf-163MHz-37dB (the earlier 9-pole, no pigtail). Same pad set. Changes from that run: a different filter (7-pole, rebuilt) and the 15 cm pigtail, so the two effects cannot be separated by these two runs alone."
+}

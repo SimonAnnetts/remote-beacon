@@ -1,0 +1,30 @@
+{
+    "id": "6m-chebyshev-lpf-64MHz-12cm-pigtail-38dB",
+    "output": "6m",
+    "description": "CLK0 (6m, the wanted signal is the fundamental) through 12 cm of pigtail, a 9-pole Chebyshev low-pass filter and a measured 38 dB pad set",
+    "chain": [
+        {
+            "kind": "cable",
+            "name": "12 cm pigtail from the Si5351 board to the filter",
+            "notes": "moves the filter away from the board to reduce high-frequency coupling; the same pigtail as used on 2m; type not recorded"
+        },
+        {
+            "kind": "filter",
+            "name": "9-pole Chebyshev low-pass",
+            "notes": "cutoff 64 MHz; home built; loses about 3.7 dB at 51 MHz"
+        },
+        {
+            "kind": "attenuator",
+            "name": "pad set",
+            "db": 37.9,
+            "notes": "measured, not the labels: a BNC attenuator marked 10 dB (really 27 dB) in series with a home-built 27-33-27 ohm T pad (15 dB), joined with SMA/BNC adapters. Measured together without the filter on 2026-10-31 as 37.9 dB at 51 MHz (36.9 to 38.4 dB from 20 to 180 MHz)."
+        }
+    ],
+    "analyser": {
+        "type": "tinysa",
+        "port": "/dev/ttyACM1",
+        "attenuation_db": 0,
+        "lna": false
+    },
+    "notes": "Compare with 6m-chebyshev-lpf-64MHz-38dB (the same chain without the pigtail). Same filter, pad set, cable and adapters; only the pigtail is added. The pad value is a measured loss between the Si5351 side and the analyser, taken as the drop from a straight cable (with the same adapters) at 2 mA. The attenuator labelled 10 dB is also the pad used in the 70cm baseline; its real loss there has not been measured at 435 MHz."
+}

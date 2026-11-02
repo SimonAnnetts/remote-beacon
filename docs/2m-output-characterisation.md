@@ -192,25 +192,32 @@ From the datasheet (not measured here): gain about 25.3 dB at 145 MHz, output P1
 
 ## 7. Other filter set-ups
 
-Three more 2m runs were made with the same five tests, the same pad set (37.4 dB) and the same cable and adapters; only the
+Six more 2m runs were made with the same five tests, the same pad set (37.4 dB) and the same cable and adapters; only the
 filters changed. All are in `tests-results/2m/` and can be compared in the web UI.
 
 * `2m-lpf-200MHz-37dB`: a cheap low-pass marked 200 MHz (three series inductors, four shunt capacitors) in place of the band-pass.
 * `2m-lpf-200MHz-then-bpf-137-140MHz-37dB`: that low-pass, then the band-pass, joined directly.
 * `2m-lpf-200MHz-15cm-bpf-137-140MHz-37dB`: the same two filters with **15 cm of coax between them**.
+* `2m-chebyshev-lpf-163MHz-37dB`: the home-built 9-pole Chebyshev low-pass **alone** (both cheap filters removed). 2026-11-01.
+* `2m-chebyshev-lpf-163MHz-15cm-bpf-137-140MHz-37dB`: the Chebyshev, 15 cm of coax, then the band-pass. This was run by mistake
+  (the band-pass was still fitted when the Chebyshev alone was intended). The file was relabelled afterwards; its measurement
+  data is unchanged and its `relabel_note` field says what was changed.
+* `2m-lpf-7pole-12cm-pigtail-37dB`: a rebuilt **7-pole low-pass** (designed cutoff about 155 MHz; on a PCB with a ground plane
+  underneath, not screened), connected to the Si5351 board through a **12 cm pigtail**. 2026-11-01, run 18:22. The run was first
+  saved under a 15 cm label; the pigtail length was corrected afterwards (see its `relabel_note`).
 
-| | Band-pass only (baseline) | Low-pass only | Low-pass + band-pass, touching | Low-pass + band-pass, 15 cm apart |
-|---|---|---|---|---|
-| Carrier at the analyser, 8 mA | -25.5 dBm | -28.0 dBm | -26.5 dBm | -26.5 dBm |
-| Highest level the analyser saw | -24.2 dBm (over) | -26.9 | -24.4 (over) | -25.4 |
-| Close-in spurs, 2 mA: worst / median | -38 / -45 dBc | -47 / -59 | -45 / -58 | -45 / -57 |
-| Close-in spurs, 8 mA: worst / median | -36 / -42 dBc | -46 / -51 | -42 / -45 | -41 / -46 |
-| 140 and 150 MHz spurs, 8 mA | -44 / -45 dBc | -47 / -46 | -46 / -47 | -46 / -47 |
-| 2nd harmonic, 290 MHz, 8 mA | not seen | **-27 dBc** | not seen | not seen |
-| 3rd harmonic, 435 MHz, 8 mA | -60 dBc | -52.5 | -60 | -57 |
-| 4th harmonic, 580 MHz, 8 mA | -58 dBc | -58 | -62 | not seen |
-| 5th harmonic, 725 MHz, 2 mA | -37 dBc | -43.5 | -36 | -52 (not verified) |
-| 5th harmonic, 725 MHz, 8 mA | -42.5 dBc | -45 | **-34** | **-50** |
+| | Band-pass only (baseline) | Low-pass only | Low-pass + band-pass, touching | Low-pass + band-pass, 15 cm apart | **Chebyshev alone** | Chebyshev + 15 cm + band-pass | **7-pole + 12 cm pigtail** |
+|---|---|---|---|---|---|---|---|
+| Carrier at the analyser, 8 mA | -25.5 dBm | -28.0 dBm | -26.5 dBm | -26.5 dBm | -28.7 dBm | -27.5 dBm | -27.6 dBm |
+| Highest level the analyser saw | -24.2 dBm (over) | -26.9 | -24.4 (over) | -25.4 | -27.0 | -25.8 | -26.9 |
+| Close-in spurs, 2 mA: worst / median | -38 / -45 dBc | -47 / -59 | -45 / -58 | -45 / -57 | -47 / -56 | -43 / -48 | -47 / -61 |
+| Close-in spurs, 8 mA: worst / median | -36 / -42 dBc | -46 / -51 | -42 / -45 | -41 / -46 | -39 / -46 | -35 / -40 | **-46 / -49** |
+| 140 and 150 MHz spurs, 8 mA | -44 / -45 dBc | -47 / -46 | -46 / -47 | -46 / -47 | -45 / -45 | -48 / -50 | -45 / -51 |
+| 2nd harmonic, 290 MHz, 8 mA | not seen | **-27 dBc** | not seen | not seen | not seen | not seen | -58 (not verified) |
+| 3rd harmonic, 435 MHz, 8 mA | -60 dBc | -52.5 | -60 | -57 | not seen | -56 | not seen |
+| 4th harmonic, 580 MHz, 8 mA | -58 dBc | -58 | -62 | not seen | **-48** | not seen | not seen |
+| 5th harmonic, 725 MHz, 2 mA | -37 dBc | -43.5 | -36 | -52 (not verified) | -43 | -43 | not seen |
+| 5th harmonic, 725 MHz, 8 mA | -42.5 dBc | -45 | **-34** | **-50** | -43.5 | -44 | **-61.5** (at the floor) |
 
 "Not seen" means below the detection limit (about -56 dBc at 2 mA and -64 dBc at 8 mA). The 725 MHz entries are partly limited
 by pickup (see below).
@@ -231,6 +238,47 @@ by pickup (see below).
   harmonics to -57 dBc or better, and keeps the close-in spurs at -57 dBc median at 2 mA. It cannot do anything about the
   close-in or 5 MHz spurs at 8 mA (-41 to -47 dBc).
 
+### The Chebyshev low-pass (2026-11-01)
+
+* **Its cutoff is 173 MHz, not the designed 163 MHz** (-3 dB), 6% high. The pass band is flat within about +/-1 dB from 116 to
+  168 MHz, so the 2m band is well inside it. Above the knee it falls to -10 dB at 180 MHz and -20 dB at 189 MHz. The response
+  test stops at 200 MHz, so the stop band beyond that is only seen in the wide scan.
+* **It removes the 2nd harmonic** (290 MHz not seen at 8 mA, where the cheap low-pass left -27 dBc) with a single part and no
+  coax spacing. The 3rd harmonic (435 MHz) is not seen either.
+* **Close-in spurs are in line with the best pair of cheap filters and 3 to 5 dB worse than the cheap low-pass alone:**
+  worst at 145 MHz -58.5 dBc (2 mA) and -47.1 dBc (8 mA), medians over 144.0 to 146.0 MHz -56 and -46 dBc. The pattern against
+  frequency is the usual one (best 144.5 to 144.6 MHz, worst 145.6 MHz at 2 mA); at 8 mA the worst points are
+  144.0 to 144.2 MHz (-38.5 to -41 dBc), and 144.3 to 144.6 MHz is the clean part (-53 to -56 dBc).
+* **725 MHz is -43 dBc (2 mA) and -43.5 dBc (8 mA)**: at 2 mA the level (-83.6 dBm) is at the pickup floor below, so it is a
+  layout limit that the filter cannot fix.
+* **580 MHz (4th harmonic) is a new entry, -48 dBc at 8 mA (-76.5 dBm)**, where every earlier set-up showed -58 dBc or better,
+  or nothing. The cause is not known; pickup or leakage around the filter is possible and has not been tested.
+* **The run with the band-pass added behind it on 15 cm (the mistaken run) is 6 to 8 dB worse in the close-in spurs**
+  (median -40 dBc against -46 dBc at 8 mA, -48 against -56 dBc at 2 mA). After the cheap low-pass the same band-pass cost
+  only 1 to 4 dB. Either way the band-pass cleans up nothing the Chebyshev leaves, so the Chebyshev alone is the better arrangement.
+
+**Verdict:** the Chebyshev alone can replace both cheap filters. If the 2nd harmonic matters, it is better than the cheap
+low-pass; for the close-in spurs alone, the cheap low-pass alone was 3 to 5 dB better at 8 mA. The 5 MHz spurs (-45 dBc at
+8 mA) and the 725 MHz pickup are unchanged by any filter tried.
+
+### The 7-pole low-pass on a 12 cm pigtail (2026-11-01)
+
+* **Cutoff:** designed for about 155 MHz, measured -3 dB at **149 MHz**. The level is flat to 144 MHz, about 1.5 dB down at
+  148 MHz and 5 dB down at 152 MHz, so the top of the 2m band is slightly attenuated. Rejection at 196 MHz is 38 dB relative
+  to the passband (the 9-pole's was 27 dB, with its higher cutoff).
+* **The cleanest 2m result so far.** At 8 mA the worst close-in spur at 145 MHz is -50 dBc (-47 for the 9-pole), the spur map
+  median is -49 dBc (-46 for the 9-pole) and the whole 144.0 to 146.0 MHz range is between -46 and -53 dBc, with none of the
+  bad patches seen before (144.0 to 144.2 MHz was -38 to -41 dBc with the 9-pole). At 2 mA the median is -61 dBc.
+* **725 MHz is -89 dBm (-61.5 dBc) at 8 mA**, at the floor of the measurement; the other filters left -43 to -50 dBc. The
+  580 and 435 MHz harmonics were not seen; the 290 MHz one is -58 dBc but was not confirmed by the verification scan.
+* **Not explained:** a -47.5 dBc spur at 683.6 MHz at 2 mA (-85.9 dBm), not a harmonic of 145 MHz and not seen in any earlier run
+  (earlier readings near that level may have been hidden by the 725 MHz pickup). The 145.6 to 146.0 MHz end is still worse than
+  the rest at 2 mA (-47 to -52 dBc).
+* **What changed:** both the filter (rebuilt, better constructed, with a ground plane) and the placement (12 cm pigtail between
+  the board and the filter). The user's view is that the separation reduces high-frequency coupling between the board and the
+  filter. The results fit that idea (the old "pickup floor" below has dropped by 8 dB or more) but do not prove it: no run has
+  the 7-pole directly on the board, or the 9-pole on a pigtail. Those two runs would separate the effects.
+
 ### Pickup floor at 725 MHz
 
 With the Si5351 running at 8 mA (145 MHz carrier) but no signal path through the filters, the analyser still sees 725 MHz:
@@ -247,9 +295,13 @@ run's 725 MHz figure, are partly pickup from the unshielded board, cables and fi
 (-68, -73 and -60 dBm) are 8 to 21 dB above it, so pickup does not explain the differences between those runs. A metal box
 around the Si5351 board and its outputs would be needed to measure, or radiate, much below this.
 
+**The -81 dBm floor applies only to the old layout.** With the 7-pole filter on a 12 cm pigtail, 725 MHz at 8 mA was -89 dBm.
+So the floor was not a fixed limit of the board, and earlier "partly pickup" readings may have been coupling between the board and
+the filters. The floor was not remeasured with the terminated-input test for the new layout.
+
 ## Limitations
 
-* Four filter set-ups, one pad set, one board, room temperature (sections 1 to 6 are the band-pass baseline; section 7 compares the others). No amplifier or antenna was connected. The board, filters and pads are unshielded.
+* Seven filter set-ups, one pad set, one board, room temperature (sections 1 to 6 are the band-pass baseline; section 7 compares the others). No amplifier or antenna was connected. The board, filters and pads are unshielded.
 * The pad was measured with no filter in front of it; a mismatch with the filter adds an uncertainty of about 2 dB to the
   levels leaving the filter. The dBc figures do not depend on it.
 * The 8 mA analyser level was marginal (up to -24.2 dBm, limit -25). The close-in spurs were checked as above and are real;

@@ -1,0 +1,37 @@
+{
+    "id": "2m-chebyshev-lpf-163MHz-15cm-bpf-137-140MHz-37dB",
+    "output": "2m",
+    "description": "CLK1 (2m, the wanted signal is the fundamental) through a home-built 9-pole Chebyshev low-pass filter (designed 163 MHz cutoff), 15 cm of coax, a cheap band-pass marked 137M/140M, then a measured 37 dB pad set",
+    "chain": [
+        {
+            "kind": "filter",
+            "name": "9-pole Chebyshev low-pass",
+            "part": "home built",
+            "notes": "designed cutoff 163 MHz (measured -3 dB point 173 MHz); connected directly to CLK1; screening not recorded"
+        },
+        {
+            "kind": "cable",
+            "name": "15 cm coax between the filters",
+            "notes": "separates the two unshielded filters"
+        },
+        {
+            "kind": "filter",
+            "name": "LC band-pass 137M/140M",
+            "part": "cheap import, marked 137M/140M",
+            "notes": "L-C-L-C-L in series with capacitors to ground at each junction; connected after the cable"
+        },
+        {
+            "kind": "attenuator",
+            "name": "pad set",
+            "db": 37.4,
+            "notes": "measured, not the labels: the 27-33-27 ohm T pad (15 dB) in series with the BNC attenuator marked 10 dB (really 27 dB), joined with SMA/BNC adapters. Measured together without a filter on 2026-10-31 as 37.4 dB at 145 MHz (36.9 to 38.4 dB from 20 to 180 MHz)."
+        }
+    ],
+    "analyser": {
+        "type": "tinysa",
+        "port": "/dev/ttyACM1",
+        "attenuation_db": 0,
+        "lna": false
+    },
+    "notes": "Compare with 2m-chebyshev-lpf-163MHz-37dB (the Chebyshev alone). Same pad set. This chain was measured by mistake when the Chebyshev alone was intended; it is kept as a valid run of this chain."
+}

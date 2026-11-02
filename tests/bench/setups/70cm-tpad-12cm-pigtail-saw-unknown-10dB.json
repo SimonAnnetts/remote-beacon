@@ -1,0 +1,37 @@
+{
+    "id": "70cm-tpad-12cm-pigtail-saw-unknown-10dB",
+    "output": "70cm",
+    "description": "CLK2 (carrier about 145 MHz, 3rd harmonic wanted) through a 27-33-27 ohm T pad at the output, 12 cm of pigtail, an unidentified SAW filter and the BNC attenuator marked 10 dB (25.8 dB at 435 MHz)",
+    "chain": [
+        {
+            "kind": "attenuator",
+            "name": "27-33-27 ohm T pad at the Si5351 output",
+            "db": 9.9,
+            "notes": "fitted directly at the CLK2 output to stop reflections from the cable and SAW reaching the Si5351; loses 9.9 dB at 435 MHz (15 dB at 145 MHz). Placed BEFORE the pigtail and the SAW, so it is not part of pad_db: the levels in the results are those leaving the SAW, as in the baseline, with the T pad's loss included in them."
+        },
+        {
+            "kind": "cable",
+            "name": "12 cm pigtail between the T pad and the SAW",
+            "notes": "the same pigtail as used on 2m and 6m; type not recorded"
+        },
+        {
+            "kind": "filter",
+            "name": "SAW filter",
+            "part": "unknown",
+            "notes": "wide passband, about 421-444 MHz at -3 dB (measured 2026-10-31)"
+        },
+        {
+            "kind": "attenuator",
+            "name": "attenuator",
+            "db": 25.8,
+            "notes": "in front of the analyser; marked 10 dB, measured 25.8 dB at 435 MHz"
+        }
+    ],
+    "analyser": {
+        "type": "tinysa",
+        "port": "/dev/ttyACM1",
+        "attenuation_db": 0,
+        "lna": false
+    },
+    "notes": "Compare with 70cm-saw-unknown-10dB (SAW directly on the board) and 70cm-saw-unknown-tpad-10dB-12cm-pigtail (pigtail, T pad after the SAW). The T pad is before the SAW here, which took the 6-10 dB pigtail dependence out of the level (measured 2026-11-01). pad_db is 25.8, so levels are 'leaving the SAW' as in the baseline, with the T pad's 9.9 dB (plus the SAW's insertion loss of about 2.5 dB) included in the loss: they read 12 dB lower than a source-side figure."
+}
