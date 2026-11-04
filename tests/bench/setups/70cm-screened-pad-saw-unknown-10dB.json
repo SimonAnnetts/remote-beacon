@@ -1,0 +1,37 @@
+{
+    "id": "70cm-screened-pad-saw-unknown-10dB",
+    "output": "70cm",
+    "description": "CLK2 (carrier about 145 MHz, 3rd harmonic wanted) with the Si5351 screened and a screened pad at the output, then an unidentified SAW filter, 30 cm of cable and the BNC attenuator marked 10 dB",
+    "chain": [
+        {
+            "kind": "attenuator",
+            "name": "screened pad on the CLK2 output",
+            "db": 8.9,
+            "notes": "fully screened pad, nominal 8 dB; measured 8.9 dB at 435 MHz (8.9 to 9.5 dB over 425 to 445 MHz) on 2026-11-03. Placed BEFORE the SAW, so it is not part of pad_db: levels in the results are those leaving the SAW, as in the older baselines, with this pad's loss included in them."
+        },
+        {
+            "kind": "filter",
+            "name": "SAW filter",
+            "part": "unknown",
+            "notes": "wide passband, about 421-444 MHz at -3 dB (measured 2026-10-31); fitted directly after the pad, before the 30 cm cable"
+        },
+        {
+            "kind": "cable",
+            "name": "30 cm cable",
+            "notes": "SAW to the attenuator; the same cable as in the pad measurements; type not recorded"
+        },
+        {
+            "kind": "attenuator",
+            "name": "attenuator",
+            "db": 25.8,
+            "notes": "in front of the analyser; marked 10 dB, measured 25.8 dB at 435 MHz"
+        }
+    ],
+    "analyser": {
+        "type": "tinysa",
+        "port": "/dev/ttyACM1",
+        "attenuation_db": 0,
+        "lna": false
+    },
+    "notes": "New topology (2026-11-03): screened Si5351 board, screened pad at the output, SAW straight after the pad. Compare with 70cm-screened-pad-nofilter-10dB (the same chain without the SAW) and with 70cm-tpad-12cm-pigtail-saw-unknown-10dB (T pad at the source). pad_db is 25.8 (cable and attenuator after the SAW), so levels are 'leaving the SAW' with the 8.9 dB source pad and the SAW's insertion loss included."
+}

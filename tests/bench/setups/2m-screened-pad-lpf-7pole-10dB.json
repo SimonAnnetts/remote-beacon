@@ -1,0 +1,36 @@
+{
+    "id": "2m-screened-pad-lpf-7pole-10dB",
+    "output": "2m",
+    "description": "CLK1 (2m, the wanted signal is the fundamental) with the Si5351 screened and a screened pad at the output, then the 7-pole low-pass, 30 cm of cable and the BNC attenuator marked 10 dB",
+    "chain": [
+        {
+            "kind": "attenuator",
+            "name": "screened pad on the CLK1 output",
+            "db": 7.5,
+            "notes": "fully screened pad, nominal 8 dB; measured 7.5 dB at 144-146 MHz (7.0 to 8.5 dB over 20 to 180 MHz) on 2026-11-03. Placed BEFORE the filter, so it is not part of pad_db: levels in the results are those leaving the filter, with this pad's loss included in them."
+        },
+        {
+            "kind": "filter",
+            "name": "7-pole low-pass",
+            "notes": "designed for about 155 MHz, measured -3 dB at 149 MHz (2026-11-01); home built on a PCB with a ground plane, unscreened; fitted directly after the pad (no pigtail)"
+        },
+        {
+            "kind": "cable",
+            "name": "30 cm cable",
+            "notes": "filter to the attenuator; the same cable as in the pad measurements; type not recorded"
+        },
+        {
+            "kind": "attenuator",
+            "name": "attenuator",
+            "db": 27.0,
+            "notes": "in front of the analyser; marked 10 dB, about 27 dB at VHF (flat 20-180 MHz, measured earlier); not re-measured at 145 MHz in this chain"
+        }
+    ],
+    "analyser": {
+        "type": "tinysa",
+        "port": "/dev/ttyACM1",
+        "attenuation_db": 0,
+        "lna": false
+    },
+    "notes": "New topology (2026-11-03/04): screened board, screened pad at the output, filter straight after the pad. Compare with 2m-screened-pad-nofilter-10dB (the same chain without the filter) and 2m-lpf-7pole-12cm-pigtail-37dB (the old unscreened run on a 12 cm pigtail). pad_db is 27.0 (cable and attenuator after the filter), so levels are 'leaving the filter' with the 7.5 dB source pad included."
+}

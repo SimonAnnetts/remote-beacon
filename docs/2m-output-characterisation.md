@@ -299,9 +299,26 @@ around the Si5351 board and its outputs would be needed to measure, or radiate, 
 So the floor was not a fixed limit of the board, and earlier "partly pickup" readings may have been coupling between the board and
 the filters. The floor was not remeasured with the terminated-input test for the new layout.
 
+## 8. Screened board with a pad on the output (2026-11-04)
+
+The Si5351 board was then screened and a screened pad (7.5 dB at 144 to 146 MHz, 7.0 to 8.5 dB over 20 to 180 MHz) fitted on CLK1, with
+the 7-pole low-pass directly after it (no pigtail). Two runs: unfiltered (2 and 4 mA only) and with the 7-pole (warning: the
+analyser saw up to -23.5 dBm at 8 mA). Full write-up in [`screened-topology.md`](screened-topology.md).
+
+| | Screened pad + 7-pole | Old 7-pole, pigtail |
+|---|---|---|
+| Close-in spur at 145.0 MHz, 2 / 4 / 8 mA | -63.3 / -60.9 / -53.5 dBc | -63.0 / -58.7 / -50.1 |
+| Spur map median, 2 / 8 mA | -62.2 / -52.7 dBc | -61.0 / -49.0 |
+| 5 MHz spurs 140 / 150 MHz, 8 mA | -42.1 / -47.4 dBc | -45.2 / -50.6 |
+
+* No measurable gain over the best earlier set-up (the filter and the pad were not separated). Unfiltered, the 3rd harmonic is
+  -9.2 dBc and the 5th -12.5 dBc at 2 mA; with the filter the 435 MHz harmonic is -62.7 dBc at 8 mA.
+* The 6 mA close-in spur at 145.0 MHz is 9 dB worse than in the old run (-47.9 against -56.8 dBc); a single point, not
+  investigated.
+
 ## Limitations
 
-* Seven filter set-ups, one pad set, one board, room temperature (sections 1 to 6 are the band-pass baseline; section 7 compares the others). No amplifier or antenna was connected. The board, filters and pads are unshielded.
+* Seven filter set-ups, one pad set, one board, room temperature (sections 1 to 6 are the band-pass baseline; section 7 compares the others). No amplifier or antenna was connected. The board, filters and pads are unshielded in sections 1 to 7; section 8 has the screened board with a screened pad.
 * The pad was measured with no filter in front of it; a mismatch with the filter adds an uncertainty of about 2 dB to the
   levels leaving the filter. The dBc figures do not depend on it.
 * The 8 mA analyser level was marginal (up to -24.2 dBm, limit -25). The close-in spurs were checked as above and are real;

@@ -75,6 +75,11 @@ With the **7-pole low-pass on a 12 cm pigtail** (the cleanest set-up so far): at
 -46 to -53 dBc (best 145.8 to 145.9 MHz at -53; worst 145.3 MHz at -45.7 and 144.1 MHz at -46.5), so the choice of frequency matters
 little. At 2 mA 144.0 to 145.5 MHz is -57 to -64 dBc (best 144.2 MHz) and **145.6 to 146.0 MHz is worse (-47 to -52 dBc)**.
 
+With the **screened board, a screened pad and the 7-pole low-pass** (2026-11-04, `docs/screened-topology.md`): the 145.0 MHz close-in
+spur is -63 dBc at 2 mA and -54 dBc at 8 mA; the spur map median is -62 / -53 dBc at 2 / 8 mA, worst points 145.6 MHz at 2 mA
+(-46 dBc) and 145.3 MHz at 8 mA (-47 dBc). Same pattern as the best earlier set-up. Only 145.0 MHz was run at 6 mA, and it was 9 dB
+worse there than before (-48 dBc), not yet explained.
+
 **Avoid (earlier set-ups):** 144.700 to 145.400 MHz and 145.600 MHz (-36 to -48 dBc at 8 mA); 145.300 MHz is the worst point.
 
 For beacons: the default 144.450 MHz was not measured, but both neighbours (144.400 and 144.500 MHz) are good, so it is
@@ -96,6 +101,10 @@ Worst close-in spur against the wanted frequency (dBc). The map has 0.25 MHz ste
 | 432.250 | -54 | -47 |
 | 430.250 | -53 | -47 |
 | 439.500 | -53 | -45 |
+
+With the **screened board, a screened pad and the SAW** (2026-11-03, `docs/screened-topology.md`) the clean region is unchanged
+(best 8 mA point 431.25 MHz, -54 dBc). The worst point at 8 mA is now **440.0 MHz (-32 dBc)**, and the unfiltered output has it too
+(-31 dBc), so it comes from the source, not the SAW. At 2 mA the worst point is still 438.25 MHz (-36 dBc).
 
 Good region: **430.75 to 432.25 MHz**, plus isolated points at 433.000 and 435.000 MHz.
 

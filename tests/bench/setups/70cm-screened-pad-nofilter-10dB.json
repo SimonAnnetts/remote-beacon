@@ -1,0 +1,31 @@
+{
+    "id": "70cm-screened-pad-nofilter-10dB",
+    "output": "70cm",
+    "description": "CLK2 (carrier about 145 MHz, 3rd harmonic wanted) with the Si5351 screened and a screened pad fitted at the output, 30 cm of cable and the BNC attenuator marked 10 dB; NO filter",
+    "chain": [
+        {
+            "kind": "attenuator",
+            "name": "screened pad on the CLK2 output",
+            "db": 8.9,
+            "notes": "fully screened pad, nominal 8 dB; measured 8.9 dB at 435 MHz (8.9 to 9.5 dB over 425 to 445 MHz) on 2026-11-03 as the drop against the same cable and attenuator without it"
+        },
+        {
+            "kind": "cable",
+            "name": "30 cm cable",
+            "notes": "pad to the attenuator; the same cable as in the pad measurements; type not recorded; its loss is included in the measured pad figure"
+        },
+        {
+            "kind": "attenuator",
+            "name": "attenuator",
+            "db": 25.8,
+            "notes": "in front of the analyser; marked 10 dB, measured 25.8 dB at 435 MHz"
+        }
+    ],
+    "analyser": {
+        "type": "tinysa",
+        "port": "/dev/ttyACM1",
+        "attenuation_db": 0,
+        "lna": false
+    },
+    "notes": "New topology (2026-11-03): the Si5351 board is screened and every output has a screened pad (about 8 dB nominal). No filter in line, so this is the raw output of the board and pad. The cable loss is included in the pad measurement, so pad_db is 34.7 dB."
+}

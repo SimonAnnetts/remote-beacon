@@ -231,6 +231,24 @@ setup `6m-chebyshev-lpf-64MHz-12cm-pigtail-38dB`; same filter, pad set (37.9 dB)
 * The 8 mA level was again 0.2 dB over the limit, as in the baseline, so the same caution applies to the 8 mA close-in figures.
 * On 6m the pigtail is not needed for the spurs. It may help a little with high-frequency pickup.
 
+## 8. Screened board with a pad on the output (2026-11-03)
+
+The Si5351 board was then screened and a screened pad (8.7 dB at 50 MHz, 8.5 to 9.5 dB over 20 to 180 MHz) fitted on CLK0, with the
+filter directly after it (no pigtail). Two runs: unfiltered (2 and 4 mA only, the 8 mA signal would be above the analyser limit)
+and with the 9-pole Chebyshev (run with `--force`: 8 mA read -24.3 dBm, 0.7 dB over the limit, warning in the file). Full
+write-up, tables and the pad measurements in [`screened-topology.md`](screened-topology.md).
+
+| | Screened pad + filter | Old baseline | Old pigtail |
+|---|---|---|---|
+| Close-in spur at 51.0 MHz, 2 / 8 mA | -50.3 / -39.3 dBc | -52.2 / -37.2 | -50.2 / -36.0 |
+| Spur map median, 2 / 8 mA | -47.5 / -38.7 dBc | -48.8 / -40.3 | -49.0 / -43.0 |
+| 49 MHz spur, 8 mA | **-48.7 dBc** | -36.5 | -35.2 |
+
+* The close-in spurs are the same with and without the filter, as before (inside the pass band). The one clear gain is the 49 MHz
+  spur, 12 dB better at 8 mA.
+* Unfiltered, the 3rd harmonic is -10.6 dBc and the 5th -14.0 dBc at 2 mA.
+* Exploratory: the filter loses 15 to 17 dB at 70.0 to 70.5 MHz (4m), so it cannot serve that band as it is (same page).
+
 ## Limitations
 
 * The pad was measured at 2 mA and at 20-180 MHz; at 8 mA with the filter in front it may differ slightly (the combined

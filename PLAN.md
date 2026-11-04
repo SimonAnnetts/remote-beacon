@@ -306,6 +306,16 @@ the source, the pigtail and the SAW (2026-11-01) brought the SAW response back t
 close-in spurs at the baseline's level (8 mA median -45 dBc), and gave 725 MHz -40 dBc (baseline -36, unpadded pigtail -46.5, so
 part of that run's improvement was just the higher wanted level). The 2 mA spur data is range-limited with that much pad.
 
+**Screened board with a pad on each output (2026-11-03/04).** The Si5351 is now screened and each output has a screened pad of
+about 8 dB (measured 8.7 dB at 50 MHz on CLK0, 7.5 dB at 145 MHz on CLK1, 8.9 dB at 435 MHz on CLK2, each flat to about 1 dB over its
+range). The full suite was run on each band without a filter and then with its filter directly after the pad
+(`docs/screened-topology.md`). 70cm with the SAW: smooth drive curve, SAW response unchanged, 725 MHz -44 dBc (baseline -36), and the
+8 mA spur at 440.0 MHz is in the unfiltered output too, so it is not the SAW's. 6m with the Chebyshev: the 49 MHz spur at 8 mA is 12 dB
+better (-48.7 dBc), the in-band spurs are unchanged. 2m with the 7-pole: no measurable gain over the best earlier set-up. Unfiltered
+6m and 2m ran at 2 and 4 mA only (analyser limit). Unfiltered 3rd harmonics are -8 to -11 dBc. Exploratory, not implemented: the 6m filter
+loses 15 to 17 dB at 70.0 to 70.5 MHz, so 4m would need another filter (same page). Still open: the 2m run without the source pad, the
+2m 6 mA spur at 145.0 MHz, and the amplifier stage (a gain-controlled AD8367 driver ahead of a PGA-103+ was discussed, P1dB not found).
+
 Controlled re-measurement of 70cm over USB (tinysa.py helper in the scratchpad: fixed 30 kHz RBW,
 25 kHz steps, 8 sweeps averaged, 8 mA, SAW fitted, "10 dB" pad (really 25.8 dB); repeatable to about 0.5 dB):
 carrier 435.000 MHz at -29.7 dBm. The +/-0.1 MHz "spurs" are the analyser's own RBW skirt (their dBc

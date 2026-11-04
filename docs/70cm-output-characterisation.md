@@ -419,6 +419,26 @@ loss, so they read about 12 dB lower than the baseline's. The 8 mA level at the 
 * **For a PGA-103+ stage** this connection gives -11.1 dBm at 8 mA leaving the SAW (with the T pad's 9.9 dB), so about +10.7 dBm
   out. A 6 dB pad at the source in place of the T pad would give about 4 dB more.
 
+## 8. Screened board with a pad on the output (2026-11-03)
+
+The Si5351 board was then screened and a screened pad (8.9 dB at 435 MHz) fitted on CLK2, with the SAW directly after it. Two
+runs, unfiltered and with the SAW (`pad_db` 25.8, so the levels leaving the SAW include the pad's loss). Full write-up in
+[`screened-topology.md`](screened-topology.md).
+
+| | Screened pad + SAW | Baseline (no source pad) |
+|---|---|---|
+| 435 MHz at the analyser, 2 / 4 / 6 / 8 mA | -45.7 / -39.2 / -35.7 / -33.2 dBm | -34.4 / -32.2 / -32.7 / -28.9 |
+| 725 MHz, 8 mA | **-44.3 dBc** | -36.3 |
+| SAW -3 dB points | 421.0 to 444.5 MHz | 420.9 to 444.1 |
+| Spur map worst, 8 mA | -32.0 dBc at 440.0 MHz | -35.8 at 437.0 |
+| Spur map median, 8 mA | -43.8 dBc | -45.4 |
+
+* The drive curve is smooth and the SAW response is unchanged, as with the T pad at the source: this supports the reflection
+  explanation again (not measured directly).
+* The 8 mA spur at 440.0 MHz is in the unfiltered output too (-30.7 dBc), so it is not the SAW's; this answers the open point in
+  section 7.
+* The unfiltered 725 MHz harmonic is -2.3 dBc; the SAW gives about 42 dB of rejection there.
+
 ## Limitations
 
 * One SAW filter of unknown type, one board, room temperature. The measurements are repeatable: two full bench runs 23 minutes

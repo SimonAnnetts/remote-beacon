@@ -1,0 +1,36 @@
+{
+    "id": "6m-screened-pad-chebyshev-lpf-64MHz-10dB",
+    "output": "6m",
+    "description": "CLK0 (6m, the wanted signal is the fundamental) with the Si5351 screened and a screened pad at the output, then the 9-pole Chebyshev low-pass, 30 cm of cable and the BNC attenuator marked 10 dB",
+    "chain": [
+        {
+            "kind": "attenuator",
+            "name": "screened pad on the CLK0 output",
+            "db": 8.7,
+            "notes": "fully screened pad, nominal 8 dB; measured 8.7 dB at 50 MHz (8.5 to 9.5 dB over 20 to 180 MHz) on 2026-11-03. Placed BEFORE the filter, so it is not part of pad_db: levels in the results are those leaving the filter, with this pad's loss included in them."
+        },
+        {
+            "kind": "filter",
+            "name": "9-pole Chebyshev low-pass",
+            "notes": "cutoff 64 MHz; home built; fitted directly after the pad (no pigtail). In the 2026-11-03 sweep on a 12 cm pigtail it lost 1.9 dB at 51 MHz (0.4 to 2.5 dB ripple in the passband), -3 dB near 67 MHz, 15-17 dB at 70-70.5 MHz"
+        },
+        {
+            "kind": "cable",
+            "name": "30 cm cable",
+            "notes": "filter to the attenuator; the same cable as in the pad measurements; type not recorded"
+        },
+        {
+            "kind": "attenuator",
+            "name": "attenuator",
+            "db": 27.0,
+            "notes": "in front of the analyser; marked 10 dB, about 27 dB at VHF (flat 20-180 MHz, measured earlier); not re-measured at 50 MHz in this chain"
+        }
+    ],
+    "analyser": {
+        "type": "tinysa",
+        "port": "/dev/ttyACM1",
+        "attenuation_db": 0,
+        "lna": false
+    },
+    "notes": "New topology (2026-11-03): screened board, screened pad at the output, filter straight after the pad. Compare with 6m-screened-pad-nofilter-10dB (the same chain without the filter) and 6m-chebyshev-lpf-64MHz-38dB (the old unscreened baseline). pad_db is 27.0 (cable and attenuator after the filter), so levels are 'leaving the filter' with the 8.7 dB source pad included."
+}

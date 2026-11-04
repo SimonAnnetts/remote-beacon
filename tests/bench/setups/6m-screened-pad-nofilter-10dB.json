@@ -1,0 +1,31 @@
+{
+    "id": "6m-screened-pad-nofilter-10dB",
+    "output": "6m",
+    "description": "CLK0 (6m, the wanted signal is the fundamental) with the Si5351 screened and a screened pad at the output, 30 cm of cable and the BNC attenuator marked 10 dB; NO filter",
+    "chain": [
+        {
+            "kind": "attenuator",
+            "name": "screened pad on the CLK0 output",
+            "db": 8.7,
+            "notes": "fully screened pad, nominal 8 dB; measured 8.7 dB at 50 MHz (8.5 to 9.5 dB over 20 to 180 MHz) on 2026-11-03 as the drop against the same cable and attenuator without it"
+        },
+        {
+            "kind": "cable",
+            "name": "30 cm cable",
+            "notes": "pad to the attenuator; the same cable as in the pad measurements; type not recorded; its loss is included in the measured pad figure"
+        },
+        {
+            "kind": "attenuator",
+            "name": "attenuator",
+            "db": 27.0,
+            "notes": "in front of the analyser; marked 10 dB, about 27 dB at VHF (flat 20-180 MHz, measured earlier); not re-measured at 50 MHz in this chain"
+        }
+    ],
+    "analyser": {
+        "type": "tinysa",
+        "port": "/dev/ttyACM1",
+        "attenuation_db": 0,
+        "lna": false
+    },
+    "notes": "New topology (2026-11-03): screened board, screened pad at the output, no filter. Run at 2 and 4 mA only because 6 and 8 mA would put the analyser input above the -25 dBm limit with this much pad; this is a different parameter set from the filtered runs, so the Compare view will flag it. pad_db is 35.7 dB."
+}
